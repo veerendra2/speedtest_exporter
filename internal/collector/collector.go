@@ -17,16 +17,26 @@ type Config struct {
 }
 
 var (
-	up = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "up"),
-		"Whether the speedtest was successful (1 = success, 0 = failure).",
+	status = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "status"),
+		"Whether the speedtest was successful (-1 = partiallysuccess, 0 = failure, 1 = success).",
 		[]string{
 			"test_uuid",
+			"user_lat",
+			"user_lon",
+			"user_ip",
+			"user_isp",
+			"server_lat",
+			"server_lon",
+			"server_id",
+			"server_name",
+			"server_country",
+			"distance",
 		}, nil,
 	)
 	scrapeDurationSeconds = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "scrape_duration_seconds"),
-		"Total time taken to complete the speedtest (ping + download + upload).",
+		"Total time taken to complete the speedtest.",
 		[]string{
 			"test_uuid",
 		}, nil,
@@ -36,16 +46,6 @@ var (
 		"Network latency to the speedtest server in seconds.",
 		[]string{
 			"test_uuid",
-			"user_lat",
-			"user_lon",
-			"user_ip",
-			"user_isp",
-			"server_lat",
-			"server_lon",
-			"server_id",
-			"server_name",
-			"server_country",
-			"distance",
 		}, nil,
 	)
 	upload = prometheus.NewDesc(
@@ -53,16 +53,6 @@ var (
 		"Upload speed in bytes per second.",
 		[]string{
 			"test_uuid",
-			"user_lat",
-			"user_lon",
-			"user_ip",
-			"user_isp",
-			"server_lat",
-			"server_lon",
-			"server_id",
-			"server_name",
-			"server_country",
-			"distance",
 		}, nil,
 	)
 	download = prometheus.NewDesc(
@@ -70,16 +60,6 @@ var (
 		"Download speed in bytes per second.",
 		[]string{
 			"test_uuid",
-			"user_lat",
-			"user_lon",
-			"user_ip",
-			"user_isp",
-			"server_lat",
-			"server_lon",
-			"server_id",
-			"server_name",
-			"server_country",
-			"distance",
 		}, nil,
 	)
 )
@@ -90,7 +70,7 @@ type Exporter struct {
 
 // Describe describes all the metrics. It implements prometheus.Collector.
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
-	ch <- up
+	ch <- status
 	ch <- scrapeDurationSeconds
 	ch <- latency
 	ch <- upload
@@ -100,37 +80,65 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	testUUID := uuid.New().String()
 	start := time.Now()
+	var statusValue float64 = 0
 
-	ok := runSpeedTest(testUUID, e.ServerId, ch)
+	successCount, user, server := runSpeedTest(testUUID, e.ServerId, ch)
+	// Calculate status based on successCount:
+	// 0     	 - All tests failed                    	   -> Metric Value: 0
+	// 1 or 2  - Some tests succeeded (partial success)  -> Metric Value: -1
+	// 3     	 - All tests succeeded                 	   -> Metric Value: 1
 
-	if ok {
+	// If user and server are not nil, we check the successCount
+	if user != nil && server != nil {
+		if successCount > 0 && successCount < 3 {
+			// Partially success
+			statusValue = -1.0
+		}
+		if successCount == 3 {
+			// All tests succeeded
+			statusValue = 1
+		}
 		ch <- prometheus.MustNewConstMetric(
-			up, prometheus.GaugeValue, 1.0,
+			status, prometheus.GaugeValue, statusValue,
 			testUUID,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			scrapeDurationSeconds, prometheus.GaugeValue, time.Since(start).Seconds(),
-			testUUID,
+			user.Lat,
+			user.Lon,
+			user.IP,
+			user.Isp,
+			server.Lat,
+			server.Lon,
+			server.ID,
+			server.Name,
+			server.Country,
+			fmt.Sprintf("%f", server.Distance),
 		)
 	} else {
+		// If tests failed completely, send status with empty labels
 		ch <- prometheus.MustNewConstMetric(
-			up, prometheus.GaugeValue, 0.0,
+			status, prometheus.GaugeValue, statusValue,
 			testUUID,
+			"", "", "", "", "", "", "", "", "", "",
 		)
 	}
+
+	ch <- prometheus.MustNewConstMetric(
+		scrapeDurationSeconds, prometheus.GaugeValue, time.Since(start).Seconds(),
+		testUUID,
+	)
 }
 
-func runSpeedTest(uuid string, serverId int, ch chan<- prometheus.Metric) bool {
+func runSpeedTest(uuid string, serverId int, ch chan<- prometheus.Metric) (int, *speedtest.User, *speedtest.Server) {
+	successCount := 0
 	user, err := speedtest.FetchUserInfo()
 	if err != nil {
 		slog.Error("Failed to fetch user info", "error", err)
-		return false
+		return successCount, nil, nil
 	}
 
 	serverList, err := speedtest.FetchServers()
 	if err != nil {
 		slog.Error("Failed to fetch server", "error", err)
-		return false
+		return successCount, nil, nil
 	}
 
 	// NOTE: FindServer finds server by serverID in given server list.
@@ -139,11 +147,11 @@ func runSpeedTest(uuid string, serverId int, ch chan<- prometheus.Metric) bool {
 	targets, err := serverList.FindServer([]int{serverId})
 	if err != nil {
 		slog.Error("Failed to find server", "error", err)
-		return false
+		return successCount, nil, nil
 	}
 
 	if len(targets) == 0 {
-		return false
+		return successCount, nil, nil
 	}
 
 	slog.Debug("Starting speedtest...",
@@ -155,14 +163,20 @@ func runSpeedTest(uuid string, serverId int, ch chan<- prometheus.Metric) bool {
 		"user_isp", user.Isp,
 	)
 
-	ok := pingTest(uuid, user, targets[0], ch)
-	ok = downloadTest(uuid, user, targets[0], ch) && ok
-	ok = uploadTest(uuid, user, targets[0], ch) && ok
+	if pingTest(uuid, targets[0], ch) {
+		successCount++
+	}
+	if downloadTest(uuid, targets[0], ch) {
+		successCount++
+	}
+	if uploadTest(uuid, targets[0], ch) {
+		successCount++
+	}
 
-	return ok
+	return successCount, user, targets[0]
 }
 
-func pingTest(uuid string, user *speedtest.User, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
+func pingTest(uuid string, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
 	err := server.PingTest(nil)
 	if err != nil {
 		slog.Error("Failed to run ping test", "error", err)
@@ -177,22 +191,12 @@ func pingTest(uuid string, user *speedtest.User, server *speedtest.Server, ch ch
 	ch <- prometheus.MustNewConstMetric(
 		latency, prometheus.GaugeValue, server.Latency.Seconds(),
 		uuid,
-		user.Lat,
-		user.Lon,
-		user.IP,
-		user.Isp,
-		server.Lat,
-		server.Lon,
-		server.ID,
-		server.Name,
-		server.Country,
-		fmt.Sprintf("%f", server.Distance),
 	)
 
 	return true
 }
 
-func downloadTest(uuid string, user *speedtest.User, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
+func downloadTest(uuid string, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
 	err := server.DownloadTest()
 	if err != nil {
 		slog.Error("Failed to run download test", "error", err)
@@ -207,22 +211,12 @@ func downloadTest(uuid string, user *speedtest.User, server *speedtest.Server, c
 	ch <- prometheus.MustNewConstMetric(
 		download, prometheus.GaugeValue, float64(server.DLSpeed)*1024*1024,
 		uuid,
-		user.Lat,
-		user.Lon,
-		user.IP,
-		user.Isp,
-		server.Lat,
-		server.Lon,
-		server.ID,
-		server.Name,
-		server.Country,
-		fmt.Sprintf("%f", server.Distance),
 	)
 
 	return true
 }
 
-func uploadTest(uuid string, user *speedtest.User, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
+func uploadTest(uuid string, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
 	err := server.UploadTest()
 	if err != nil {
 		slog.Error("Failed to run upload test", "error", err)
@@ -236,16 +230,6 @@ func uploadTest(uuid string, user *speedtest.User, server *speedtest.Server, ch 
 	ch <- prometheus.MustNewConstMetric(
 		upload, prometheus.GaugeValue, float64(server.ULSpeed)*1024*1024,
 		uuid,
-		user.Lat,
-		user.Lon,
-		user.IP,
-		user.Isp,
-		server.Lat,
-		server.Lon,
-		server.ID,
-		server.Name,
-		server.Country,
-		fmt.Sprintf("%f", server.Distance),
 	)
 
 	return true

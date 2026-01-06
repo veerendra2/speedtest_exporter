@@ -1,6 +1,6 @@
 ---
 services:
-  adminer:
+  speedtest_exporter:
     image: ghcr.io/veerendra2/speedtest_exporter:latest
     hostname: speedtest_exporter
     container_name: speedtest_exporter

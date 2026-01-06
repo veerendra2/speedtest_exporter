@@ -75,7 +75,7 @@ func main() {
 		slog.Error("Server stopped.")
 	}()
 
-	// All components should be terminated gracefully. For that we are listen
+	// All components should be terminated gracefully. For that we listen
 	// for the SIGINT and SIGTERM signals and try to gracefully shutdown the
 	// started components. This ensures that established connections or tasks
 	// are not interrupted.

@@ -56,20 +56,15 @@ services:
 
 Download latest binary from [release page](https://github.com/veerendra2/speedtest_exporter/releases)
 
-```bash
-chmod +x speedtest_exporter_linux_amd64
-./speedtest_exporter_linux_amd64
-```
-
 ## Metrics
 
-| Metric                              | Type  | Description                                                          |
-| ----------------------------------- | ----- | -------------------------------------------------------------------- |
-| `speedtest_up`                      | Gauge | Whether the last speedtest was successful (1 = success, 0 = failure) |
-| `speedtest_scrape_duration_seconds` | Gauge | Total time taken to complete the speedtest                           |
-| `speedtest_latency_seconds`         | Gauge | Network latency to the speedtest server                              |
-| `speedtest_download_speed_Bps`      | Gauge | Download speed in bytes per second                                   |
-| `speedtest_upload_speed_Bps`        | Gauge | Upload speed in bytes per second                                     |
+| Metric                              | Type  | Description                                                                                 |
+| ----------------------------------- | ----- | ------------------------------------------------------------------------------------------- |
+| `speedtest_status`                  | Gauge | Whether the last speedtest was successful (-1 = partiallysuccess, 0 = failure, 1 = success) |
+| `speedtest_scrape_duration_seconds` | Gauge | Total time taken to complete the speedtest                                                  |
+| `speedtest_latency_seconds`         | Gauge | Network latency to the speedtest server                                                     |
+| `speedtest_download_speed_Bps`      | Gauge | Download speed in bytes per second                                                          |
+| `speedtest_upload_speed_Bps`        | Gauge | Upload speed in bytes per second                                                            |
 
 ## Prometheus Configuration
 
