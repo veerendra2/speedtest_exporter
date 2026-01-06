@@ -33,7 +33,7 @@ var cli struct {
 func main() {
 	kongCtx := kong.Parse(&cli,
 		kong.Name(appName),
-		kong.Description("A speedtest exporter for Prometheus."),
+		kong.Description("A Prometheus exporter for monitoring internet speed with speedtest.net"),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{
 			Compact: true,
@@ -55,22 +55,22 @@ func main() {
 	prometheus.MustRegister(sClient)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if _, err := w.Write([]byte("<body>Metrics are available at <a href=\"/metrics\">/metrics</a></body>")); err != nil {
-			slog.Warn("Failed to write", slog.Any("err", err))
+			slog.Warn("Failed to write", "error", err)
 		}
 	})
 	http.Handle("/metrics", promhttp.Handler())
 
 	server := &http.Server{
 		Addr:              cli.Address,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       30 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       3 * time.Minute,
+		WriteTimeout:      3 * time.Minute,
+		IdleTimeout:       2 * time.Minute,
 	}
 
 	go func() {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("Server died unexpected.", slog.Any("error", err))
+			slog.Error("Server died unexpected.", "error", err)
 		}
 		slog.Error("Server stopped.")
 	}()

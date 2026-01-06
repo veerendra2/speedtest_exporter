@@ -20,30 +20,67 @@ var (
 	up = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "up"),
 		"Whether the speedtest was successful (1 = success, 0 = failure).",
-		[]string{"test_uuid"}, nil,
+		[]string{
+			"test_uuid",
+		}, nil,
 	)
 	scrapeDurationSeconds = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "scrape_duration_seconds"),
 		"Total time taken to complete the speedtest (ping + download + upload).",
-		[]string{"test_uuid"}, nil,
+		[]string{
+			"test_uuid",
+		}, nil,
 	)
 	latency = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "latency_seconds"),
 		"Network latency to the speedtest server in seconds.",
-		[]string{"test_uuid", "user_lat", "user_lon", "user_ip", "user_isp", "server_lat", "server_lon", "server_id", "server_name", "server_country", "distance"},
-		nil,
+		[]string{
+			"test_uuid",
+			"user_lat",
+			"user_lon",
+			"user_ip",
+			"user_isp",
+			"server_lat",
+			"server_lon",
+			"server_id",
+			"server_name",
+			"server_country",
+			"distance",
+		}, nil,
 	)
 	upload = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "upload_speed_Bps"),
 		"Upload speed in bytes per second.",
-		[]string{"test_uuid", "user_lat", "user_lon", "user_ip", "user_isp", "server_lat", "server_lon", "server_id", "server_name", "server_country", "distance"},
-		nil,
+		[]string{
+			"test_uuid",
+			"user_lat",
+			"user_lon",
+			"user_ip",
+			"user_isp",
+			"server_lat",
+			"server_lon",
+			"server_id",
+			"server_name",
+			"server_country",
+			"distance",
+		}, nil,
 	)
 	download = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "download_speed_Bps"),
 		"Download speed in bytes per second.",
-		[]string{"test_uuid", "user_lat", "user_lon", "user_ip", "user_isp", "server_lat", "server_lon", "server_id", "server_name", "server_country", "distance"},
-		nil,
+		[]string{
+			"test_uuid",
+			"user_lat",
+			"user_lon",
+			"user_ip",
+			"user_isp",
+			"server_lat",
+			"server_lon",
+			"server_id",
+			"server_name",
+			"server_country",
+			"distance",
+		}, nil,
 	)
 )
 
@@ -64,7 +101,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	testUUID := uuid.New().String()
 	start := time.Now()
 
-	ok := runSpeedtest(testUUID, e.ServerId, ch)
+	ok := runSpeedTest(testUUID, e.ServerId, ch)
 
 	if ok {
 		ch <- prometheus.MustNewConstMetric(
@@ -83,7 +120,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func runSpeedtest(uuid string, serverId int, ch chan<- prometheus.Metric) bool {
+func runSpeedTest(uuid string, serverId int, ch chan<- prometheus.Metric) bool {
 	user, err := speedtest.FetchUserInfo()
 	if err != nil {
 		slog.Error("Failed to fetch user info", "error", err)

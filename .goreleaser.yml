@@ -16,7 +16,7 @@ builds:
     goarch:
       - amd64
       - arm64
-    main: /path/to/main.go
+    main: main.go
     ldflags:
       - "-X github.com/veerendra2/gopackages/version.Version={{.Version}}"
       - "-X github.com/veerendra2/gopackages/version.Revision={{.Commit}}"
