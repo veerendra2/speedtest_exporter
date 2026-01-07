@@ -19,9 +19,9 @@ builds:
     main: main.go
     ldflags:
       - "-X github.com/veerendra2/gopackages/version.Version={{.Version}}"
-      - "-X github.com/veerendra2/gopackages/version.Revision={{.Commit}}"
+      - "-X github.com/veerendra2/gopackages/version.Revision={{.ShortCommit}}"
       - "-X github.com/veerendra2/gopackages/version.Branch={{.Branch}}"
-      - "-X github.com/veerendra2/gopackages/version.BuildUser={{.Env.USER}}"
+      - "-X github.com/veerendra2/gopackages/version.BuildUser=github-ci"
       - "-X github.com/veerendra2/gopackages/version.BuildDate={{.Date}}"
 
 archives:

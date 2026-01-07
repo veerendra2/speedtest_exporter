@@ -2,13 +2,13 @@
 
 A Prometheus exporter for monitoring internet speed with [speedtest.net](https://www.speedtest.net/).
 
-> **Note:** Inspired by [danopstech/speedtest_exporter](https://github.com/danopstech/speedtest_exporter) which is no longer maintained.
+> **Note:** Inspired by [danopstech/speedtest_exporter](https://github.com/danopstech/speedtest_exporter) which is no longer actively maintained.
 
 ## Features
 
 - Measures download/upload speeds and latency
 - Exports metrics in Prometheus format
-- Supports specific speedtest.net server selection (uses [Speedtest.net API](https://www.speedtest.net/api/js/servers) via [speedtest-go](https://github.com/showwin/speedtest-go/blob/master/speedtest/server.go#L22))
+- Supports specific speedtest.net server selection (uses [speedtest.net API](https://www.speedtest.net/api/js/servers) via [speedtest-go](https://github.com/showwin/speedtest-go.git))
 - Auto-selects nearest server when not specified or if requested server is unavailable
 - Includes geographical metadata (user/server location)
 
