@@ -1,6 +1,8 @@
 ---
 version: 2
 
+project_name: speedtest_exporter
+
 before:
   hooks:
     - go mod tidy
@@ -14,7 +16,7 @@ builds:
     goarch:
       - amd64
       - arm64
-    main: /path/to/main.go
+    main: main.go
     ldflags:
       - "-X github.com/veerendra2/gopackages/version.Version={{.Version}}"
       - "-X github.com/veerendra2/gopackages/version.Revision={{.Commit}}"
@@ -38,24 +40,3 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
-#
-# Uncomment and update below to release as Homebrew Cask
-# homebrew_casks:
-#   - name: YOUR_APP
-#     directory: Casks
-#     homepage: "https://github.com/veerendra2/YOUR_REPO"
-#     description: "YOUR DESCRIPTION"
-#     url:
-#       verified: github.com/veerendra2/YOUR_REPO
-#       template: "https://github.com/veerendra2/YOU_REPO/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-#     hooks:
-#       post:
-#         install: |
-#           if OS.mac?
-#             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/YOUR_APP"]
-#           end
-#     repository:
-#       owner: veerendra2
-#       name: homebrew-tap
-#       branch: main
-#       token: "{{ .Env.GITHUB_TOKEN }}"

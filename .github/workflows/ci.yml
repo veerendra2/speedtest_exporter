@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-slim
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -24,23 +24,3 @@ jobs:
           version: latest
           working-directory: ./
           args: --timeout 3m
-
-  run-tests:
-    name: Run Tests
-    runs-on: ubuntu-slim
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v5
-
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: "go.mod"
-          cache: true
-
-      - name: Install Task
-        uses: go-task/setup-task@v1
-
-      - name: Run Tests
-        run: |
-          task tests

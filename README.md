@@ -1,43 +1,81 @@
-# Go Project Template
+# Speedtest Exporter
 
-> Other references
->
-> - https://github.com/thockin/go-build-template/tree/master
-> - https://peter.bourgon.org/go-best-practices-2016/
+A Prometheus exporter for monitoring internet speed with [speedtest.net](https://www.speedtest.net/).
 
-## Getting Started
+> **Note:** Inspired by [danopstech/speedtest_exporter](https://github.com/danopstech/speedtest_exporter) which is no longer maintained.
 
-Follow below steps after creating a new repository from this template
+## Features
 
-- [ ] **Initialize Go module:**
+- Measures download/upload speeds and latency
+- Exports metrics in Prometheus format
+- Supports specific speedtest.net server selection (uses [Speedtest.net API](https://www.speedtest.net/api/js/servers) via [speedtest-go](https://github.com/showwin/speedtest-go/blob/master/speedtest/server.go#L22))
+- Auto-selects nearest server when not specified or if requested server is unavailable
+- Includes geographical metadata (user/server location)
 
-  ```bash
-  go mod init github.com/YOUR_USERNAME/YOUR_PROJECT_NAME
-  go mod tidy
-  ```
+## Quick Start
 
-- [ ] **Update app name** in:
+```bash
+./speedtest_exporter -h
+Usage: speedtest_exporter [flags]
 
-  - [ ] [Taskfile.yml](./Taskfile.yml) - `APP_NAME` variable
-  - [ ] [Dockerfile](./Dockerfile) - Binary name and labels
-  - [ ] [main.go](./main.go) - `appName` constant
-  - [ ] [.goreleaser.yml](./.goreleaser.yml) - `project_name` and `binary` name
-  - [ ] [README.md](./README.md) - Title and description
+A Prometheus exporter for monitoring internet speed with speedtest.net
 
-- [ ] **Update main file location** (if not using root `main.go`):
+Flags:
+  -h, --help                 Show context-sensitive help.
+      --address=":8080"      The address where the server should listen on ($ADDRESS).
+      --server-id=0          Speedtest.net server ID (0 = auto-select nearest server) ($SERVER_ID)
+      --log-format="json"    Set the output format of the logs. Must be "console" or "json" ($LOG_FORMAT).
+      --log-level=INFO       Set the log level. Must be "DEBUG", "INFO", "WARN" or "ERROR" ($LOG_LEVEL).
+      --log-add-source       Whether to add source file and line number to log records ($LOG_ADD_SOURCE).
+```
 
-  - [ ] [Taskfile.yml](./Taskfile.yml) - `MAIN_FILE` variable
-  - [ ] [.goreleaser.yml](./.goreleaser.yml) - `main` field under `builds`
+### Using Docker
 
-- [ ] **Configure Homebrew release** (optional):
+```bash
+docker run -p 8080:8080 ghcr.io/veerendra2/speedtest_exporter:latest
+```
 
-  > **Note:** GitHub's default `GITHUB_TOKEN` has limited permissions for tap repositories. See [GoReleaser docs](https://goreleaser.com/errors/resource-not-accessible-by-integration/).
+Docker Compose
 
-  - [ ] Add `RELEASE_TOKEN` in repository secrets and update in [release workflow](./.github/workflows/release.yml)
-  - [ ] Update [release workflow](./.github/workflows/release.yml) to use the new token
-  - [ ] Update [.goreleaser.yml](./.goreleaser.yml) `brews` section with your tap repository details
+```yaml
+---
+services:
+  speedtest_exporter:
+    image: ghcr.io/veerendra2/speedtest_exporter:latest
+    hostname: speedtest_exporter
+    container_name: speedtest_exporter
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      LOG_ADD_SOURCE: false
+      LOG_FORMAT: console
+```
 
-- [ ] **Clean up:** Delete this checklist and update README with project documentation
+### Using Binary
+
+Download latest binary from [release page](https://github.com/veerendra2/speedtest_exporter/releases)
+
+## Metrics
+
+| Metric                              | Type  | Description                                                                                |
+| ----------------------------------- | ----- | ------------------------------------------------------------------------------------------ |
+| `speedtest_status`                  | Gauge | Whether the last speedtest was successful (-1 = partial success, 0 = failure, 1 = success) |
+| `speedtest_scrape_duration_seconds` | Gauge | Total time taken to complete the speedtest                                                 |
+| `speedtest_latency_seconds`         | Gauge | Network latency to the speedtest server                                                    |
+| `speedtest_download_speed_Bps`      | Gauge | Download speed in bytes per second                                                         |
+| `speedtest_upload_speed_Bps`        | Gauge | Upload speed in bytes per second                                                           |
+
+## Prometheus Configuration
+
+```yaml
+scrape_configs:
+  - job_name: "speedtest"
+    scrape_interval: 1h
+    scrape_timeout: 2m
+    static_configs:
+      - targets: ["localhost:8080"]
+```
 
 ## Build & Test
 
