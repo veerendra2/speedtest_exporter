@@ -80,51 +80,34 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	testUUID := uuid.New().String()
 	start := time.Now()
-	var statusValue float64 = 0
+	var statusValue float64
 
 	successCount, user, server := runSpeedTest(testUUID, e.ServerId, ch)
-	// Calculate status based on successCount:
+
+	// Determine status based on successCount:
 	// 0     	 - All tests failed                    	   -> Metric Value: 0
 	// 1 or 2  - Some tests succeeded (partial success)  -> Metric Value: -1
 	// 3     	 - All tests succeeded                 	   -> Metric Value: 1
-
-	// If user and server are not nil, we check the successCount
-	if user != nil && server != nil {
-		if successCount > 0 && successCount < 3 {
-			// Partially success
-			statusValue = -1.0
-		}
-		if successCount == 3 {
-			// All tests succeeded
-			statusValue = 1
-		}
-		ch <- prometheus.MustNewConstMetric(
-			status, prometheus.GaugeValue, statusValue,
-			testUUID,
-			user.Lat,
-			user.Lon,
-			user.IP,
-			user.Isp,
-			server.Lat,
-			server.Lon,
-			server.ID,
-			server.Name,
-			server.Country,
-			fmt.Sprintf("%f", server.Distance),
-		)
-	} else {
-		// If tests failed completely, send status with empty labels
-		ch <- prometheus.MustNewConstMetric(
-			status, prometheus.GaugeValue, statusValue,
-			testUUID,
-			"", "", "", "", "", "", "", "", "", "",
-		)
+	switch successCount {
+	case 3:
+		statusValue = 1.0
+	case 0:
+		statusValue = 0.0
+	default:
+		statusValue = -1.0
 	}
 
-	ch <- prometheus.MustNewConstMetric(
-		scrapeDurationSeconds, prometheus.GaugeValue, time.Since(start).Seconds(),
-		testUUID,
-	)
+	labels := []string{testUUID, "", "", "", "", "", "", "", "", "", ""}
+	if statusValue != 0.0 {
+		labels = []string{
+			testUUID, user.Lat, user.Lon, user.IP, user.Isp,
+			server.Lat, server.Lon, server.ID, server.Name, server.Country,
+			fmt.Sprintf("%f", server.Distance),
+		}
+	}
+
+	ch <- prometheus.MustNewConstMetric(status, prometheus.GaugeValue, statusValue, labels...)
+	ch <- prometheus.MustNewConstMetric(scrapeDurationSeconds, prometheus.GaugeValue, time.Since(start).Seconds(), testUUID)
 }
 
 func runSpeedTest(uuid string, serverId int, ch chan<- prometheus.Metric) (int, *speedtest.User, *speedtest.Server) {
@@ -154,8 +137,15 @@ func runSpeedTest(uuid string, serverId int, ch chan<- prometheus.Metric) (int, 
 		return successCount, nil, nil
 	}
 
+	if serverId != 0 && targets[0].ID != fmt.Sprintf("%d", serverId) {
+		slog.Warn("Requested server not found, using nearest server",
+			"requested_id", serverId,
+			"selected_id", targets[0].ID)
+	}
+
 	slog.Debug("Starting speedtest...",
 		"test_uuid", uuid,
+		"server_id", targets[0].ID,
 		"server", targets[0].Host,
 		"server_distance", targets[0].Distance,
 		"server_country", targets[0].Country,
@@ -205,11 +195,11 @@ func downloadTest(uuid string, server *speedtest.Server, ch chan<- prometheus.Me
 
 	slog.Debug("Download test completed",
 		"test_uuid", uuid,
-		"download_speed_bytes_per_sec", server.DLSpeed*1024*1024,
+		"download_speed", server.DLSpeed,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		download, prometheus.GaugeValue, float64(server.DLSpeed)*1024*1024,
+		download, prometheus.GaugeValue, float64(server.DLSpeed),
 		uuid,
 	)
 
@@ -224,11 +214,11 @@ func uploadTest(uuid string, server *speedtest.Server, ch chan<- prometheus.Metr
 	}
 	slog.Debug("Upload test completed",
 		"test_uuid", uuid,
-		"upload_speed_bytes_per_sec", server.ULSpeed*1024*1024,
+		"upload_speed", server.ULSpeed,
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		upload, prometheus.GaugeValue, float64(server.ULSpeed)*1024*1024,
+		upload, prometheus.GaugeValue, float64(server.ULSpeed),
 		uuid,
 	)
 

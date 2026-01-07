@@ -8,8 +8,8 @@ A Prometheus exporter for monitoring internet speed with [speedtest.net](https:/
 
 - Measures download/upload speeds and latency
 - Exports metrics in Prometheus format
-- Supports specific Speedtest.net server selection
-- Auto-selects nearest server when not specified
+- Supports specific speedtest.net server selection (uses [Speedtest.net API](https://www.speedtest.net/api/js/servers) via [speedtest-go](https://github.com/showwin/speedtest-go/blob/master/speedtest/server.go#L22))
+- Auto-selects nearest server when not specified or if requested server is unavailable
 - Includes geographical metadata (user/server location)
 
 ## Quick Start
