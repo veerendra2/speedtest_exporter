@@ -70,7 +70,8 @@ func main() {
 
 	go func() {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("Server died unexpected.", "error", err)
+			slog.Error("Server died unexpectedly.", "error", err)
+			return
 		}
 		slog.Error("Server stopped.")
 	}()

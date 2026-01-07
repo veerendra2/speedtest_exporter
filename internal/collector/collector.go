@@ -13,13 +13,13 @@ import (
 const namespace = "speedtest"
 
 type Config struct {
-	ServerId int `env:"SERVER_ID" default:"0" help:"Speedtest.net server ID (0 = auto-select nearest server)"`
+	ServerID int `env:"SERVER_ID" default:"0" help:"Speedtest.net server ID (0 = auto-select nearest server)"`
 }
 
 var (
 	status = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "status"),
-		"Whether the speedtest was successful (-1 = partiallysuccess, 0 = failure, 1 = success).",
+		"Whether the speedtest was successful (-1 = partial success, 0 = failure, 1 = success).",
 		[]string{
 			"test_uuid",
 			"user_lat",
@@ -65,7 +65,7 @@ var (
 )
 
 type Exporter struct {
-	ServerId int
+	ServerID int
 }
 
 // Describe describes all the metrics. It implements prometheus.Collector.
@@ -82,7 +82,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	start := time.Now()
 	var statusValue float64
 
-	successCount, user, server := runSpeedTest(testUUID, e.ServerId, ch)
+	successCount, user, server := runSpeedTest(testUUID, e.ServerID, ch)
 
 	// Determine status based on successCount:
 	// 0     	 - All tests failed                    	   -> Metric Value: 0
@@ -227,6 +227,6 @@ func uploadTest(uuid string, server *speedtest.Server, ch chan<- prometheus.Metr
 
 func New(cfg Config) *Exporter {
 	return &Exporter{
-		ServerId: cfg.ServerId,
+		ServerID: cfg.ServerID,
 	}
 }
