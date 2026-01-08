@@ -1,0 +1,122 @@
+---
+name: victoriametrics
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    depends_on:
+      victoriametrics:
+        condition: service_started
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./:/etc/grafana/dashboards
+    configs:
+      - source: dashboard.yml
+        target: /etc/grafana/provisioning/dashboards/dashboard.yml
+        mode: 444
+      - source: datasource.yml
+        target: /etc/grafana/provisioning/datasources/datasource.yml
+        mode: 444
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: changeme
+      GF_USERS_ALLOW_SIGN_UP: false
+      # GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+      GF_INSTALL_PLUGINS: flant-statusmap-panel,ae3e-plotly-panel,marcusolsson-dynamictext-panel
+      GF_SERVE_FROM_SUB_PATH: true
+      GF_AUTH_ANONYMOUS_ENABLED: true
+    ports:
+      - "3000:3000"
+    networks:
+      - victoria_metrics_network
+    restart: unless-stopped
+    hostname: grafana
+
+  speedtest_exporter:
+    image: ghcr.io/veerendra2/speedtest_exporter:latest
+    container_name: speedtest_exporter
+    environment:
+      LOG_ADD_SOURCE: false
+      LOG_FORMAT: console
+    networks:
+      - victoria_metrics_network
+    restart: unless-stopped
+    hostname: speedtest_exporter
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: victoriametrics
+    volumes:
+      - victoria_metrics_data:/victoria-metrics-data
+    configs:
+      - source: scrape.yaml
+        target: /scrape.yaml
+        mode: 444
+    ports:
+      - "8428:8428"
+    networks:
+      - victoria_metrics_network
+    command:
+      - "-promscrape.config=/scrape.yaml"
+      - "-retentionPeriod=30d"
+    restart: unless-stopped
+    hostname: victoriametrics
+
+networks:
+  victoria_metrics_network:
+    name: victoria_metrics_network
+    attachable: true
+volumes:
+  victoria_metrics_data:
+    name: victoria_metrics_data
+  grafana_data:
+    name: grafana_data
+
+configs:
+  scrape.yaml:
+    name: scrape.yaml
+    content: |
+      ---
+      scrape_configs:
+      - job_name: victoriametrics
+        static_configs:
+        - targets:
+          - http://localhost:8428
+
+      - job_name: speedtest_exporter
+        scrape_interval: 5m
+        scrape_timeout: 2m
+        static_configs:
+        - targets:
+          - speedtest_exporter:8080
+
+  datasource.yml:
+    name: datasource.yml
+    content: |
+      ---
+      apiVersion: 1
+
+      datasources:
+        - name: VictoriaMetrics
+          type: VictoriaMetrics
+          access: proxy
+          url: http://victoriametrics:8428
+          isDefault: true
+
+  dashboard.yml:
+    name: dashboard.yml
+    content: |
+      ---
+      apiVersion: 1
+
+      providers:
+        - name: 'Prometheus'
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          allowUiUpdates: true
+          options:
+            path: /etc/grafana/dashboards
