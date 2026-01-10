@@ -10,7 +10,7 @@ services:
         condition: service_started
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./:/etc/grafana/dashboards
+      - ./dashboard:/etc/grafana/dashboards
     configs:
       - source: dashboard.yml
         target: /etc/grafana/provisioning/dashboards/dashboard.yml
@@ -22,25 +22,22 @@ services:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: changeme
       GF_USERS_ALLOW_SIGN_UP: false
-      # GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
-      GF_INSTALL_PLUGINS: flant-statusmap-panel,ae3e-plotly-panel,marcusolsson-dynamictext-panel
+      GF_INSTALL_PLUGINS: victoriametrics-metrics-datasource
       GF_SERVE_FROM_SUB_PATH: true
       GF_AUTH_ANONYMOUS_ENABLED: true
     ports:
       - "3000:3000"
     networks:
-      - victoria_metrics_network
+      - victoriametrics_network
     restart: unless-stopped
     hostname: grafana
 
   speedtest_exporter:
-    image: ghcr.io/veerendra2/speedtest_exporter:latest
+    build:
+      context: .
     container_name: speedtest_exporter
-    environment:
-      LOG_ADD_SOURCE: false
-      LOG_FORMAT: console
     networks:
-      - victoria_metrics_network
+      - victoriametrics_network
     restart: unless-stopped
     hostname: speedtest_exporter
 
@@ -48,7 +45,7 @@ services:
     image: victoriametrics/victoria-metrics:latest
     container_name: victoriametrics
     volumes:
-      - victoria_metrics_data:/victoria-metrics-data
+      - victoriametrics_data:/victoria-metrics-data
     configs:
       - source: scrape.yaml
         target: /scrape.yaml
@@ -56,7 +53,7 @@ services:
     ports:
       - "8428:8428"
     networks:
-      - victoria_metrics_network
+      - victoriametrics_network
     command:
       - "-promscrape.config=/scrape.yaml"
       - "-retentionPeriod=30d"
@@ -64,12 +61,12 @@ services:
     hostname: victoriametrics
 
 networks:
-  victoria_metrics_network:
-    name: victoria_metrics_network
+  victoriametrics_network:
+    name: victoriametrics_network
     attachable: true
 volumes:
-  victoria_metrics_data:
-    name: victoria_metrics_data
+  victoriametrics_data:
+    name: victoriametrics_data
   grafana_data:
     name: grafana_data
 
@@ -99,7 +96,7 @@ configs:
 
       datasources:
         - name: VictoriaMetrics
-          type: VictoriaMetrics
+          type: victoriametrics-metrics-datasource
           access: proxy
           url: http://victoriametrics:8428
           isDefault: true

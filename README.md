@@ -78,7 +78,7 @@ scrape_configs:
     scrape_interval: 1h
     scrape_timeout: 2m
     static_configs:
-      - targets: ["localhost:8080"]
+      - targets: ["speedtest_exporter:8080"]
 ```
 
 ## Build & Test
@@ -112,4 +112,10 @@ _Install GoReleaser: [Installation Guide](https://goreleaser.com/install/)_
 # Build locally
 goreleaser release --snapshot --clean
 ...
+```
+
+- Dev compose stack
+
+```bash
+docker compose -f compose-dev.yml up --build --force-recreate -d
 ```

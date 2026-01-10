@@ -49,15 +49,15 @@ var (
 		}, nil,
 	)
 	upload = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "upload_speed_Bps"),
-		"Upload speed in bytes per second.",
+		prometheus.BuildFQName(namespace, "", "upload_speed_bps"),
+		"Upload speed in bits per second.",
 		[]string{
 			"test_uuid",
 		}, nil,
 	)
 	download = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "download_speed_Bps"),
-		"Download speed in bytes per second.",
+		prometheus.BuildFQName(namespace, "", "download_speed_bps"),
+		"Download speed in bits per second.",
 		[]string{
 			"test_uuid",
 		}, nil,
@@ -85,9 +85,9 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	successCount, user, server := runSpeedTest(testUUID, e.ServerID, ch)
 
 	// Determine status based on successCount:
-	// 0     	 - All tests failed                    	   -> Metric Value: 0
-	// 1 or 2  - Some tests succeeded (partial success)  -> Metric Value: -1
-	// 3     	 - All tests succeeded                 	   -> Metric Value: 1
+	// 0     	 - All tests failed                    	  -> Metric Value: 0
+	// 1 or 2  - Some tests succeeded (partial success) -> Metric Value: -1
+	// 3     	 - All tests succeeded                 	  -> Metric Value: 1
 	switch successCount {
 	case 3:
 		statusValue = 1.0
@@ -97,11 +97,13 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		statusValue = -1.0
 	}
 
-	labels := []string{testUUID, "", "", "", "", "", "", "", "", "", ""}
+	labels := []string{testUUID,
+		"N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A",
+	}
 	if statusValue != 0.0 {
 		labels = []string{
 			testUUID, user.Lat, user.Lon, user.IP, user.Isp,
-			server.Lat, server.Lon, server.ID, server.Name, server.Country,
+			server.Lat, server.Lon, server.ID, server.Host, server.Country,
 			fmt.Sprintf("%f", server.Distance),
 		}
 	}
@@ -199,7 +201,7 @@ func downloadTest(uuid string, server *speedtest.Server, ch chan<- prometheus.Me
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		download, prometheus.GaugeValue, float64(server.DLSpeed),
+		download, prometheus.GaugeValue, float64(server.DLSpeed)*8,
 		uuid,
 	)
 
@@ -218,7 +220,7 @@ func uploadTest(uuid string, server *speedtest.Server, ch chan<- prometheus.Metr
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		upload, prometheus.GaugeValue, float64(server.ULSpeed),
+		upload, prometheus.GaugeValue, float64(server.ULSpeed)*8,
 		uuid,
 	)
 
