@@ -53,19 +53,21 @@ services:
 ## Metrics
 
 ```
-speedtest_download_speed_bps{test_uuid="ca2d9a4b-5743-45a2-8391-4da887d6b33e"} 2.6180952517756084e+08
+# HELP speedtest_download_speed_bps Download speed in bits per second.
+# TYPE speedtest_download_speed_bps gauge
+speedtest_download_speed_bps 2.64761758619317e+08
 # HELP speedtest_latency_seconds Network latency to the speedtest server in seconds.
 # TYPE speedtest_latency_seconds gauge
-speedtest_latency_seconds{test_uuid="ca2d9a4b-5743-45a2-8391-4da887d6b33e"} 0.028829883
+speedtest_latency_seconds 0.028449016
 # HELP speedtest_scrape_duration_seconds Total time taken to complete the speedtest.
 # TYPE speedtest_scrape_duration_seconds gauge
-speedtest_scrape_duration_seconds{test_uuid="ca2d9a4b-5743-45a2-8391-4da887d6b33e"} 24.600010136
+speedtest_scrape_duration_seconds 23.171728333
 # HELP speedtest_status Whether the speedtest was successful (-1 = partial success, 0 = failure, 1 = success).
 # TYPE speedtest_status gauge
-speedtest_status{distance="143.150308",server_country="Germany",server_id="36896",server_lat="50.8892",server_lon="10.8789",server_name="speed.alphacron.de.prod.hosts.ooklaserver.net:8080",test_uuid="ca2d9a4b-5743-45a2-8391-4da887d6b33e",user_ip="REDACTED",user_isp="Vodafone Germany",user_lat="REDACTED",user_lon="REDACTED"} 1
+speedtest_status{distance="121.286353",server_country="Germany",server_id="17982",server_lat="51.9066",server_lon="12.5416",server_name="osts-01.wittenberg-net.de.prod.hosts.ooklaserver.net:8080",user_ip="[REDACTED]",user_isp="Vodafone Germany",user_lat="REDACTED",user_lon="REDACTED"} 1
 # HELP speedtest_upload_speed_bps Upload speed in bits per second.
 # TYPE speedtest_upload_speed_bps gauge
-speedtest_upload_speed_bps{test_uuid="ca2d9a4b-5743-45a2-8391-4da887d6b33e"} 5.188586940214216e+07
+speedtest_upload_speed_bps 5.175917158818312e+07
 ```
 
 ## Dashboard
