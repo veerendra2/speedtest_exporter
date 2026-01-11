@@ -1,12 +1,10 @@
 ---
+name: speedtest_exporter
 services:
   speedtest_exporter:
     image: ghcr.io/veerendra2/speedtest_exporter:latest
-    hostname: speedtest_exporter
     container_name: speedtest_exporter
-    restart: unless-stopped
     ports:
-      - "8080:8080"
-    environment:
-      LOG_ADD_SOURCE: false
-      LOG_FORMAT: console
+      - '8080:8080'
+    restart: unless-stopped
+    hostname: speedtest_exporter
