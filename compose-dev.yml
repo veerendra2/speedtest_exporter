@@ -26,7 +26,7 @@ services:
       GF_SERVE_FROM_SUB_PATH: true
       GF_AUTH_ANONYMOUS_ENABLED: true
     ports:
-      - "3000:3000"
+      - '3000:3000'
     networks:
       - victoriametrics_network
     restart: unless-stopped
@@ -36,6 +36,8 @@ services:
     build:
       context: .
     container_name: speedtest_exporter
+    ports:
+      - '8080:8080'
     networks:
       - victoriametrics_network
     restart: unless-stopped
@@ -51,7 +53,7 @@ services:
         target: /scrape.yaml
         mode: 444
     ports:
-      - "8428:8428"
+      - '8428:8428'
     networks:
       - victoriametrics_network
     command:

@@ -53,22 +53,26 @@ services:
 ## Metrics
 
 ```
-# HELP speedtest_download_speed_Bps Download speed in bytes per second.
-# TYPE speedtest_download_speed_Bps gauge
-speedtest_download_speed_Bps{test_uuid="b37d2ad4-e382-452e-ba2f-53e6480dad39"} 3.060982156305362e+06
+speedtest_download_speed_bps{test_uuid="ca2d9a4b-5743-45a2-8391-4da887d6b33e"} 2.6180952517756084e+08
 # HELP speedtest_latency_seconds Network latency to the speedtest server in seconds.
 # TYPE speedtest_latency_seconds gauge
-speedtest_latency_seconds{test_uuid="b37d2ad4-e382-452e-ba2f-53e6480dad39"} 0.005002029
+speedtest_latency_seconds{test_uuid="ca2d9a4b-5743-45a2-8391-4da887d6b33e"} 0.028829883
 # HELP speedtest_scrape_duration_seconds Total time taken to complete the speedtest.
 # TYPE speedtest_scrape_duration_seconds gauge
-speedtest_scrape_duration_seconds{test_uuid="b37d2ad4-e382-452e-ba2f-53e6480dad39"} 30.330574389
+speedtest_scrape_duration_seconds{test_uuid="ca2d9a4b-5743-45a2-8391-4da887d6b33e"} 24.600010136
 # HELP speedtest_status Whether the speedtest was successful (-1 = partial success, 0 = failure, 1 = success).
 # TYPE speedtest_status gauge
-speedtest_status{distance="4.885019",server_country="Germany",server_id="2495",server_lat="[REDACTED]",server_lon="[REDACTED]",server_name="[REDACTED]",test_uuid="b37d2ad4-e382-452e-ba2f-53e6480dad39",user_ip="[REDACTED]",user_isp="[REDACTED]",user_lat="[REDACTED]",user_lon="[REDACTED]"} 1
-# HELP speedtest_upload_speed_Bps Upload speed in bytes per second.
-# TYPE speedtest_upload_speed_Bps gauge
-speedtest_upload_speed_Bps{test_uuid="b37d2ad4-e382-452e-ba2f-53e6480dad39"} 1.2263623242466215e+07
+speedtest_status{distance="143.150308",server_country="Germany",server_id="36896",server_lat="50.8892",server_lon="10.8789",server_name="speed.alphacron.de.prod.hosts.ooklaserver.net:8080",test_uuid="ca2d9a4b-5743-45a2-8391-4da887d6b33e",user_ip="REDACTED",user_isp="Vodafone Germany",user_lat="REDACTED",user_lon="REDACTED"} 1
+# HELP speedtest_upload_speed_bps Upload speed in bits per second.
+# TYPE speedtest_upload_speed_bps gauge
+speedtest_upload_speed_bps{test_uuid="ca2d9a4b-5743-45a2-8391-4da887d6b33e"} 5.188586940214216e+07
 ```
+
+## Dashboard
+
+- Download dashboard json [here](./dashboard/speedtest-exporter.json)
+
+![grafana-dashboard-screenshot.png](./dashboard/grafana-dashboard-screenshot.png)
 
 ## Prometheus Configuration
 

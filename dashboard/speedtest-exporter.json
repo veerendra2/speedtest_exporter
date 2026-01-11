@@ -778,7 +778,28 @@
             },
             "inspect": false
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "FAILED"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 2,
+                  "text": "SUCCESS"
+                },
+                "-1": {
+                  "color": "yellow",
+                  "index": 0,
+                  "text": "PARTIAL SUCCESS"
+                }
+              },
+              "type": "value"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -802,7 +823,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 128
+                "value": 91
               }
             ]
           },
@@ -814,7 +835,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 117
+                "value": 90
               }
             ]
           },
@@ -826,7 +847,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 155
+                "value": 127
               }
             ]
           },
@@ -838,7 +859,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 147
+                "value": 114
               }
             ]
           },
@@ -850,7 +871,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 116
+                "value": 99
               }
             ]
           },
@@ -862,15 +883,27 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 181
+                "value": 112
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 162
               }
             ]
           }
         ]
       },
       "gridPos": {
-        "h": 14,
-        "w": 24,
+        "h": 13,
+        "w": 15,
         "x": 0,
         "y": 17
       },
@@ -970,9 +1003,9 @@
       },
       "gridPos": {
         "h": 13,
-        "w": 24,
-        "x": 0,
-        "y": 31
+        "w": 9,
+        "x": 15,
+        "y": 17
       },
       "id": 9,
       "options": {
@@ -1037,7 +1070,7 @@
               "longitude": "server_lon",
               "mode": "coords"
             },
-            "name": "Server",
+            "name": "Server-Location",
             "tooltip": true,
             "type": "markers"
           },
@@ -1061,7 +1094,7 @@
                   "min": 2
                 },
                 "symbol": {
-                  "fixed": "img/icons/marker/circle.svg",
+                  "fixed": "img/icons/marker/triangle.svg",
                   "mode": "fixed"
                 },
                 "symbolAlign": {
@@ -1087,7 +1120,7 @@
               "longitude": "user_lon",
               "mode": "coords"
             },
-            "name": "User",
+            "name": "User-Location",
             "tooltip": true,
             "type": "markers"
           }
@@ -1161,6 +1194,47 @@
             ],
             "fields": {}
           }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "__name__": true,
+              "instance": true,
+              "job": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "Time": 1,
+              "Value": 15,
+              "__name__": 2,
+              "distance": 3,
+              "instance": 4,
+              "job": 5,
+              "server_country": 6,
+              "server_id": 0,
+              "server_lat": 7,
+              "server_lon": 8,
+              "server_name": 9,
+              "test_uuid": 10,
+              "user_ip": 11,
+              "user_isp": 12,
+              "user_lat": 13,
+              "user_lon": 14
+            },
+            "renameByName": {
+              "server_country": "Server Country",
+              "server_id": "Server ID",
+              "server_lat": "Server Latitude",
+              "server_lon": "Server Longitude",
+              "server_name": "Server Name",
+              "test_uuid": "UUID",
+              "user_ip": "User IP",
+              "user_isp": "User ISP",
+              "user_lat": "User Latitude",
+              "user_lon": "User Longitude"
+            }
+          }
         }
       ],
       "type": "geomap"
@@ -1184,5 +1258,5 @@
   "timezone": "browser",
   "title": "Speedtest",
   "uid": "adxxqh2",
-  "version": 22
+  "version": 26
 }
