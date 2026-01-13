@@ -79,7 +79,7 @@ Pre-built Grafana dashboards are available for both VictoriaMetrics and Promethe
 | VictoriaMetrics  | [speedtest-exporter-victoriametrics.json](./dashboards/speedtest-exporter-victoriametrics.json) |
 | Prometheus       | [speedtest-exporter-prometheus.json](./dashboards/speedtest-exporter-prometheus.json)           |
 
-![grafana-dashboard-screenshot.png](./dashboard/grafana-dashboard-screenshot.png)
+![grafana-dashboard-screenshot.png](./dashboards/grafana-dashboard-screenshot.png)
 
 ## Prometheus Configuration
 
