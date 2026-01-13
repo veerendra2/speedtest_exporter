@@ -38,7 +38,7 @@
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
       },
       "description": "Average download speed",
       "fieldConfig": {
@@ -85,10 +85,13 @@
       "pluginVersion": "12.3.1",
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "${datasource}"
+          },
           "editorMode": "code",
           "expr": "avg_over_time(speedtest_download_speed_bps[$__interval])",
           "format": "time_series",
-          "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
@@ -99,7 +102,7 @@
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
       },
       "description": "Average upload speed",
       "fieldConfig": {
@@ -146,6 +149,10 @@
       "pluginVersion": "12.3.1",
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "${datasource}"
+          },
           "editorMode": "code",
           "expr": "speedtest_upload_speed_bps",
           "format": "time_series",
@@ -230,7 +237,7 @@
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -312,6 +319,10 @@
       "pluginVersion": "12.3.1",
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "${datasource}"
+          },
           "editorMode": "code",
           "expr": "speedtest_latency_seconds",
           "format": "time_series",
@@ -326,7 +337,7 @@
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
       },
       "description": "Speedtest duration",
       "fieldConfig": {
@@ -407,7 +418,7 @@
         {
           "datasource": {
             "type": "victoriametrics-metrics-datasource",
-            "uid": "P4169E866C3094E38"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "speedtest_scrape_duration_seconds",
@@ -423,7 +434,7 @@
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -439,7 +450,7 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 25,
+            "fillOpacity": 36,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -448,12 +459,15 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
+            "lineStyle": {
+              "fill": "solid"
+            },
             "lineWidth": 1,
-            "pointSize": 5,
+            "pointSize": 7,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "showValues": false,
             "spanNulls": false,
             "stacking": {
@@ -489,7 +503,7 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom",
+          "placement": "right",
           "showLegend": true
         },
         "tooltip": {
@@ -503,7 +517,7 @@
         {
           "datasource": {
             "type": "victoriametrics-metrics-datasource",
-            "uid": "P4169E866C3094E38"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "speedtest_download_speed_bps",
@@ -515,7 +529,7 @@
         {
           "datasource": {
             "type": "victoriametrics-metrics-datasource",
-            "uid": "P4169E866C3094E38"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "speedtest_upload_speed_bps",
@@ -526,13 +540,13 @@
           "refId": "B"
         }
       ],
-      "title": "Download/Upload Throughput",
+      "title": "Download/Upload Speed",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -716,6 +730,10 @@
       "pluginVersion": "12.3.1",
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "${datasource}"
+          },
           "editorMode": "code",
           "expr": "speedtest_status[$__interval]",
           "format": "table",
@@ -775,7 +793,7 @@
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -945,8 +963,12 @@
       "pluginVersion": "12.3.1",
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "${datasource}"
+          },
           "editorMode": "code",
-          "expr": "speedtest_status",
+          "expr": "speedtest_status[$__interval]",
           "format": "table",
           "legendFormat": "__auto",
           "range": true,
@@ -1050,13 +1072,14 @@
     "list": [
       {
         "current": {
-          "text": "Victoriametrics",
-          "value": "Victoriametrics"
+          "text": "VictoriaMetrics",
+          "value": "P4169E866C3094E38"
         },
-        "includeAll": false,
-        "name": "Datasource",
+        "description": "Victoriametrics Datasource",
+        "label": "Data Source",
+        "name": "datasource",
         "options": [],
-        "query": "prometheus",
+        "query": "victoriametrics-metrics-datasource",
         "refresh": 1,
         "regex": "",
         "type": "datasource"
@@ -1073,5 +1096,5 @@
   "timezone": "browser",
   "title": "Speedtest",
   "uid": "adxxqh2",
-  "version": 27
+  "version": 28
 }

@@ -72,7 +72,12 @@ speedtest_upload_speed_bps 5.175917158818312e+07
 
 ## Dashboard
 
-- Download dashboard json [here](./dashboard/speedtest-exporter.json)
+Pre-built Grafana dashboards are available for both VictoriaMetrics and Prometheus data sources:
+
+| Data Source Type | Dashboard JSON                                                                                 |
+| ---------------- | ---------------------------------------------------------------------------------------------- |
+| VictoriaMetrics  | [speedtest-exporter-victoriametrics.json](./dashboard/speedtest-exporter-victoriametrics.json) |
+| Prometheus       | [speedtest-exporter-prometheus.json](./dashboard/speedtest-exporter-prometheus.json)           |
 
 ![grafana-dashboard-screenshot.png](./dashboard/grafana-dashboard-screenshot.png)
 
