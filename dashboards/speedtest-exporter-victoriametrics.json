@@ -15,6 +15,7 @@
       }
     ]
   },
+  "description": "Speedtest Exporter Dashboard - https://github.com/veerendra2/speedtest_exporter",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -27,7 +28,7 @@
       "keepTime": false,
       "tags": [],
       "targetBlank": true,
-      "title": "Github Repository",
+      "title": "GitHub Repository",
       "tooltip": "",
       "type": "link",
       "url": "https://github.com/veerendra2/speedtest_exporter"
@@ -37,7 +38,7 @@
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
       },
       "description": "Average download speed",
       "fieldConfig": {
@@ -84,10 +85,13 @@
       "pluginVersion": "12.3.1",
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "${datasource}"
+          },
           "editorMode": "code",
-          "expr": "avg(avg_over_time(speedtest_download_speed_bps[$__interval]))",
+          "expr": "avg_over_time(speedtest_download_speed_bps[$__interval])",
           "format": "time_series",
-          "legendFormat": "__auto",
           "range": true,
           "refId": "A"
         }
@@ -98,7 +102,7 @@
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
       },
       "description": "Average upload speed",
       "fieldConfig": {
@@ -133,7 +137,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "mean"
           ],
           "fields": "",
           "values": false
@@ -145,8 +149,12 @@
       "pluginVersion": "12.3.1",
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "${datasource}"
+          },
           "editorMode": "code",
-          "expr": "avg(avg_over_time(speedtest_upload_speed_bps[$__interval]))",
+          "expr": "speedtest_upload_speed_bps",
           "format": "time_series",
           "legendFormat": "__auto",
           "range": true,
@@ -161,19 +169,28 @@
         "type": "victoriametrics-metrics-datasource",
         "uid": "P4169E866C3094E38"
       },
-      "description": "Average latency in selected time window",
+      "description": "Mean latency in selected time window",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
+          "decimals": 2,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
+                "color": "green",
                 "value": 0
+              },
+              {
+                "color": "#EAB839",
+                "value": 40
+              },
+              {
+                "color": "red",
+                "value": 50
               }
             ]
           },
@@ -194,7 +211,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "mean"
           ],
           "fields": "",
           "values": false
@@ -207,7 +224,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "avg(avg_over_time(speedtest_latency_seconds[$__interval]))",
+          "expr": "speedtest_latency_seconds",
           "format": "time_series",
           "legendFormat": "__auto",
           "range": true,
@@ -220,7 +237,7 @@
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -302,8 +319,12 @@
       "pluginVersion": "12.3.1",
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "${datasource}"
+          },
           "editorMode": "code",
-          "expr": "avg(speedtest_latency_seconds)",
+          "expr": "speedtest_latency_seconds",
           "format": "time_series",
           "legendFormat": "Latency",
           "range": true,
@@ -316,355 +337,7 @@
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
-      },
-      "description": "Download best and worst in selected time window",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "bps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 0
-      },
-      "id": 3,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "text": {
-          "valueSize": 50
-        },
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "12.3.1",
-      "targets": [
-        {
-          "editorMode": "code",
-          "expr": "max(max_over_time(speedtest_download_speed_bps[$__interval]))",
-          "format": "time_series",
-          "legendFormat": "Best",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "victoriametrics-metrics-datasource",
-            "uid": "P4169E866C3094E38"
-          },
-          "editorMode": "code",
-          "expr": "min(min_over_time(speedtest_download_speed_bps[$__interval]))",
-          "format": "time_series",
-          "hide": false,
-          "legendFormat": "Worst",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Download",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
-      },
-      "description": "Update best and worst in selected time window",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "yellow",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "bps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 4
-      },
-      "id": 4,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "text": {
-          "valueSize": 50
-        },
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "12.3.1",
-      "targets": [
-        {
-          "editorMode": "code",
-          "expr": "max(max_over_time(speedtest_upload_speed_bps[$__interval]))",
-          "format": "time_series",
-          "legendFormat": "Best",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "victoriametrics-metrics-datasource",
-            "uid": "P4169E866C3094E38"
-          },
-          "editorMode": "code",
-          "expr": "min(min_over_time(speedtest_upload_speed_bps[$__interval]))",
-          "format": "time_series",
-          "hide": false,
-          "legendFormat": "Wrost",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Upload",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 25,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "showValues": false,
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "bps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 11,
-        "w": 18,
-        "x": 0,
-        "y": 6
-      },
-      "id": 1,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.3.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "victoriametrics-metrics-datasource",
-            "uid": "P4169E866C3094E38"
-          },
-          "editorMode": "code",
-          "expr": "avg(speedtest_download_speed_bps)",
-          "format": "time_series",
-          "legendFormat": "Download",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "victoriametrics-metrics-datasource",
-            "uid": "P4169E866C3094E38"
-          },
-          "editorMode": "code",
-          "expr": "avg(speedtest_upload_speed_bps)",
-          "format": "time_series",
-          "hide": false,
-          "legendFormat": "Upload",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Download/Upload Throughput",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
-      },
-      "description": "Latency best and worst in selected time window",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "blue",
-                "value": 0
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 8
-      },
-      "id": 5,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "vertical",
-        "percentChangeColorMode": "standard",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "text": {
-          "valueSize": 50
-        },
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "12.3.1",
-      "targets": [
-        {
-          "editorMode": "code",
-          "expr": "max(max_over_time(speedtest_latency_seconds[$__interval]))",
-          "format": "time_series",
-          "legendFormat": "Best",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "victoriametrics-metrics-datasource",
-            "uid": "P4169E866C3094E38"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "min(min_over_time(speedtest_latency_seconds[$__interval]))",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "Wrost",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "Latency",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
       },
       "description": "Speedtest duration",
       "fieldConfig": {
@@ -721,10 +394,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 6,
         "w": 6,
         "x": 18,
-        "y": 12
+        "y": 0
       },
       "id": 6,
       "options": {
@@ -745,10 +418,10 @@
         {
           "datasource": {
             "type": "victoriametrics-metrics-datasource",
-            "uid": "P4169E866C3094E38"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "avg(speedtest_scrape_duration_seconds)",
+          "expr": "speedtest_scrape_duration_seconds",
           "format": "time_series",
           "legendFormat": "Test Duration",
           "range": true,
@@ -761,7 +434,119 @@
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 36,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineStyle": {
+              "fill": "solid"
+            },
+            "lineWidth": 1,
+            "pointSize": 7,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "speedtest_download_speed_bps",
+          "format": "time_series",
+          "legendFormat": "Download",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "speedtest_upload_speed_bps",
+          "format": "time_series",
+          "hide": false,
+          "legendFormat": "Upload",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Download/Upload Speed",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-metrics-datasource",
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -773,10 +558,14 @@
             "cellOptions": {
               "type": "auto"
             },
+            "filterable": false,
             "footer": {
               "reducers": []
             },
-            "inspect": false
+            "inspect": false,
+            "styleField": "Value",
+            "wrapHeaderText": false,
+            "wrapText": false
           },
           "mappings": [
             {
@@ -808,8 +597,16 @@
                 "value": 0
               },
               {
+                "color": "yellow",
+                "value": -1
+              },
+              {
                 "color": "red",
-                "value": 80
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
               }
             ]
           }
@@ -859,7 +656,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 114
+                "value": 136
               }
             ]
           },
@@ -871,7 +668,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 99
+                "value": 115
               }
             ]
           },
@@ -883,7 +680,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 112
+                "value": 153
               }
             ]
           },
@@ -898,23 +695,45 @@
                 "value": 162
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 114
+              }
+            ]
           }
         ]
       },
       "gridPos": {
         "h": 13,
-        "w": 15,
+        "w": 13,
         "x": 0,
-        "y": 17
+        "y": 15
       },
       "id": 8,
       "options": {
         "cellHeight": "sm",
-        "showHeader": true
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Status"
+          }
+        ]
       },
       "pluginVersion": "12.3.1",
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "${datasource}"
+          },
           "editorMode": "code",
           "expr": "speedtest_status[$__interval]",
           "format": "table",
@@ -923,7 +742,7 @@
           "refId": "A"
         }
       ],
-      "title": "Test History",
+      "title": "Speedtest History",
       "transformations": [
         {
           "id": "filterFieldsByName",
@@ -974,7 +793,7 @@
     {
       "datasource": {
         "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1003,9 +822,9 @@
       },
       "gridPos": {
         "h": 13,
-        "w": 9,
-        "x": 15,
-        "y": 17
+        "w": 11,
+        "x": 13,
+        "y": 15
       },
       "id": 9,
       "options": {
@@ -1144,8 +963,12 @@
       "pluginVersion": "12.3.1",
       "targets": [
         {
+          "datasource": {
+            "type": "victoriametrics-metrics-datasource",
+            "uid": "${datasource}"
+          },
           "editorMode": "code",
-          "expr": "speedtest_status",
+          "expr": "speedtest_status[$__interval]",
           "format": "table",
           "legendFormat": "__auto",
           "range": true,
@@ -1246,7 +1069,22 @@
     "speedtest"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "text": "VictoriaMetrics",
+          "value": "P4169E866C3094E38"
+        },
+        "description": "Victoriametrics Datasource",
+        "label": "Data Source",
+        "name": "datasource",
+        "options": [],
+        "query": "victoriametrics-metrics-datasource",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      }
+    ]
   },
   "time": {
     "from": "now-30m",
@@ -1258,5 +1096,5 @@
   "timezone": "browser",
   "title": "Speedtest",
   "uid": "adxxqh2",
-  "version": 26
+  "version": 28
 }
