@@ -31,6 +31,8 @@ Flags:
 
 ### Using Docker
 
+> Uses distroless base image (`gcr.io/distroless/static:nonroot`) for minimal attack surface and smaller image size. Multi-arch support for `linux/amd64` and `linux/arm64`.
+
 ```bash
 docker run -d -p 8080:8080 ghcr.io/veerendra2/speedtest_exporter:latest
 ```

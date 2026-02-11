@@ -8,7 +8,8 @@ before:
     - go mod tidy
 
 builds:
-  - env:
+  - id: binaries
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
@@ -16,13 +17,28 @@ builds:
     goarch:
       - amd64
       - arm64
-    main: main.go
+    main: .
     ldflags:
       - "-X github.com/veerendra2/gopackages/version.Version={{.Version}}"
       - "-X github.com/veerendra2/gopackages/version.Revision={{.ShortCommit}}"
       - "-X github.com/veerendra2/gopackages/version.Branch={{.Branch}}"
-      - "-X github.com/veerendra2/gopackages/version.BuildUser=github-ci"
+      - "-X github.com/veerendra2/gopackages/version.BuildUser={{if .Env.USER}}{{.Env.USER}}{{else}}ci{{end}}"
       - "-X github.com/veerendra2/gopackages/version.BuildDate={{.Date}}"
+
+kos:
+  - id: distroless-image
+    build: binaries
+    repositories:
+      - ghcr.io/veerendra2/speedtest_exporter
+    tags:
+      - "{{.Version}}"
+      - latest
+    bare: true
+    preserve_import_paths: false
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    base_image: gcr.io/distroless/static:nonroot
 
 archives:
   - formats: ["zip"]

@@ -14,7 +14,7 @@ vars:
   BUILD_USER:
     sh: id -un
   REVISION:
-    sh: git rev-parse HEAD
+    sh: git rev-parse --short HEAD
   VERSION:
     sh: git describe --tags --always
 
