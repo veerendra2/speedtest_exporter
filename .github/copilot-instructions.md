@@ -101,6 +101,6 @@ Configuration uses embedded structs with Kong tags:
 - Recommended Prometheus scrape: interval 1h, timeout 2m
 
 ### Development Environment
-- Go 1.25.5
-- Dev stack available via `compose-dev.yml`
+- Go 1.25.7
+- Dev stack available via `compose-dev.yml` (VictoriaMetrics + Grafana + speedtest_exporter)
 - Tools auto-installed via `task install`: golangci-lint, govulncheck
