@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"time"
@@ -8,6 +9,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/showwin/speedtest-go/speedtest"
 )
+
+// testTimeout caps each scrape's speedtest to prevent blocking Prometheus indefinitely.
+const testTimeout = 2 * time.Minute
 
 const namespace = "speedtest"
 
@@ -55,7 +59,8 @@ var (
 )
 
 type Exporter struct {
-	ServerID int
+	serverID int
+	client   *speedtest.Speedtest
 }
 
 // Describe describes all the metrics. It implements prometheus.Collector.
@@ -71,7 +76,10 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	start := time.Now()
 	var statusValue float64
 
-	successCount, user, server := runSpeedTest(e.ServerID, ch)
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+
+	successCount, user, server := e.runSpeedTest(ctx, ch)
 
 	// Determine status based on successCount:
 	// 0     	 - All tests failed                    	  -> Metric Value: 0
@@ -101,63 +109,71 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(scrapeDurationSeconds, prometheus.GaugeValue, time.Since(start).Seconds())
 }
 
-func runSpeedTest(serverId int, ch chan<- prometheus.Metric) (int, *speedtest.User, *speedtest.Server) {
+func (e *Exporter) runSpeedTest(ctx context.Context, ch chan<- prometheus.Metric) (int, *speedtest.User, *speedtest.Server) {
 	successCount := 0
-	user, err := speedtest.FetchUserInfo()
+
+	user, err := e.client.FetchUserInfo()
 	if err != nil {
 		slog.Error("Failed to fetch user info", "error", err)
 		return successCount, nil, nil
 	}
 
-	serverList, err := speedtest.FetchServers()
-	if err != nil {
-		slog.Error("Failed to fetch server", "error", err)
-		return successCount, nil, nil
+	// When a specific server is configured, fetch it directly — avoids fetching and
+	// pinging the full server list. Falls back to nearest on error.
+	var server *speedtest.Server
+	if e.serverID != 0 {
+		server, err = e.client.FetchServerByID(fmt.Sprintf("%d", e.serverID))
+		if err != nil {
+			slog.Warn("Requested server not found, falling back to nearest", "server_id", e.serverID, "error", err)
+		}
 	}
-
-	// NOTE: FindServer finds server by serverID in given server list.
-	// If the id is not found in the given list, return the server
-	// with the lowest latency.
-	targets, err := serverList.FindServer([]int{serverId})
-	if err != nil {
-		slog.Error("Failed to find server", "error", err)
-		return successCount, nil, nil
-	}
-
-	if len(targets) == 0 {
-		return successCount, nil, nil
-	}
-
-	if serverId != 0 && targets[0].ID != fmt.Sprintf("%d", serverId) {
-		slog.Warn("Requested server not found, using nearest server",
-			"requested_id", serverId,
-			"selected_id", targets[0].ID)
+	if server == nil {
+		serverList, err := e.client.FetchServers()
+		if err != nil {
+			slog.Error("Failed to fetch servers", "error", err)
+			return successCount, nil, nil
+		}
+		targets, err := serverList.FindServer([]int{})
+		if err != nil {
+			slog.Error("Failed to find server", "error", err)
+			return successCount, nil, nil
+		}
+		if len(targets) == 0 {
+			return successCount, nil, nil
+		}
+		server = targets[0]
 	}
 
 	slog.Debug("Starting speedtest...",
-		"server_id", targets[0].ID,
-		"server", targets[0].Host,
-		"server_distance", targets[0].Distance,
-		"server_country", targets[0].Country,
+		"server_id", server.ID,
+		"server", server.Host,
+		"server_distance", server.Distance,
+		"server_country", server.Country,
 		"user_ip", user.IP,
 		"user_isp", user.Isp,
 	)
 
-	if pingTest(targets[0], ch) {
+	if pingTest(ctx, server, ch) {
 		successCount++
 	}
-	if downloadTest(targets[0], ch) {
+	if downloadTest(ctx, server, ch) {
 		successCount++
 	}
-	if uploadTest(targets[0], ch) {
+	if uploadTest(ctx, server, ch) {
 		successCount++
 	}
 
-	return successCount, user, targets[0]
+	// Reset clears DataChunks/RateSequence and archives the snapshot to a
+	// 10-entry ring buffer. Clean() immediately drops that archive since the
+	// exporter never reads historical snapshots, keeping memory truly flat.
+	server.Context.Reset()
+	server.Context.Snapshots().Clean()
+
+	return successCount, user, server
 }
 
-func pingTest(server *speedtest.Server, ch chan<- prometheus.Metric) bool {
-	err := server.PingTest(nil)
+func pingTest(ctx context.Context, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
+	err := server.PingTestContext(ctx, nil)
 	if err != nil {
 		slog.Error("Failed to run ping test", "error", err)
 		return false
@@ -174,8 +190,8 @@ func pingTest(server *speedtest.Server, ch chan<- prometheus.Metric) bool {
 	return true
 }
 
-func downloadTest(server *speedtest.Server, ch chan<- prometheus.Metric) bool {
-	err := server.DownloadTest()
+func downloadTest(ctx context.Context, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
+	err := server.DownloadTestContext(ctx)
 	if err != nil {
 		slog.Error("Failed to run download test", "error", err)
 		return false
@@ -192,8 +208,8 @@ func downloadTest(server *speedtest.Server, ch chan<- prometheus.Metric) bool {
 	return true
 }
 
-func uploadTest(server *speedtest.Server, ch chan<- prometheus.Metric) bool {
-	err := server.UploadTest()
+func uploadTest(ctx context.Context, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
+	err := server.UploadTestContext(ctx)
 	if err != nil {
 		slog.Error("Failed to run upload test", "error", err)
 		return false
@@ -211,6 +227,9 @@ func uploadTest(server *speedtest.Server, ch chan<- prometheus.Metric) bool {
 
 func New(cfg Config) *Exporter {
 	return &Exporter{
-		ServerID: cfg.ServerID,
+		serverID: cfg.ServerID,
+		client: speedtest.New(speedtest.WithUserConfig(&speedtest.UserConfig{
+			SavingMode: true,
+		})),
 	}
 }
