@@ -3,7 +3,6 @@ package collector
 import (
 	"fmt"
 	"log/slog"
-	"runtime"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -55,13 +54,8 @@ var (
 	)
 )
 
-// Exporter implements prometheus.Collector for speedtest metrics.
-// It owns a single *speedtest.Speedtest client that is reused across scrapes.
-// SavingMode limits concurrent connections to 1, which significantly reduces
-// peak memory usage during download/upload tests.
 type Exporter struct {
-	serverID int
-	client   *speedtest.Speedtest
+	ServerID int
 }
 
 // Describe describes all the metrics. It implements prometheus.Collector.
@@ -77,12 +71,12 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	start := time.Now()
 	var statusValue float64
 
-	successCount, user, server := e.runSpeedTest(ch)
+	successCount, user, server := runSpeedTest(e.ServerID, ch)
 
 	// Determine status based on successCount:
-	// 0       - All tests failed                       -> Metric Value: 0
+	// 0     	 - All tests failed                    	  -> Metric Value: 0
 	// 1 or 2  - Some tests succeeded (partial success) -> Metric Value: -1
-	// 3       - All tests succeeded                    -> Metric Value: 1
+	// 3     	 - All tests succeeded                 	  -> Metric Value: 1
 	switch successCount {
 	case 3:
 		statusValue = 1.0
@@ -105,25 +99,17 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 	ch <- prometheus.MustNewConstMetric(status, prometheus.GaugeValue, statusValue, labels...)
 	ch <- prometheus.MustNewConstMetric(scrapeDurationSeconds, prometheus.GaugeValue, time.Since(start).Seconds())
-
-	// Reset the DataManager after each scrape to release RateSequence slices,
-	// DataChunk snapshots, and Welford state accumulated during the test.
-	e.client.Reset()
-
-	// Request a GC cycle so that the heap freed above is returned to the OS
-	// promptly rather than waiting for the next scheduled collection.
-	runtime.GC()
 }
 
-func (e *Exporter) runSpeedTest(ch chan<- prometheus.Metric) (int, *speedtest.User, *speedtest.Server) {
+func runSpeedTest(serverId int, ch chan<- prometheus.Metric) (int, *speedtest.User, *speedtest.Server) {
 	successCount := 0
-	user, err := e.client.FetchUserInfo()
+	user, err := speedtest.FetchUserInfo()
 	if err != nil {
 		slog.Error("Failed to fetch user info", "error", err)
 		return successCount, nil, nil
 	}
 
-	serverList, err := e.client.FetchServers()
+	serverList, err := speedtest.FetchServers()
 	if err != nil {
 		slog.Error("Failed to fetch server", "error", err)
 		return successCount, nil, nil
@@ -132,7 +118,7 @@ func (e *Exporter) runSpeedTest(ch chan<- prometheus.Metric) (int, *speedtest.Us
 	// NOTE: FindServer finds server by serverID in given server list.
 	// If the id is not found in the given list, return the server
 	// with the lowest latency.
-	targets, err := serverList.FindServer([]int{e.serverID})
+	targets, err := serverList.FindServer([]int{serverId})
 	if err != nil {
 		slog.Error("Failed to find server", "error", err)
 		return successCount, nil, nil
@@ -142,9 +128,9 @@ func (e *Exporter) runSpeedTest(ch chan<- prometheus.Metric) (int, *speedtest.Us
 		return successCount, nil, nil
 	}
 
-	if e.serverID != 0 && targets[0].ID != fmt.Sprintf("%d", e.serverID) {
+	if serverId != 0 && targets[0].ID != fmt.Sprintf("%d", serverId) {
 		slog.Warn("Requested server not found, using nearest server",
-			"requested_id", e.serverID,
+			"requested_id", serverId,
 			"selected_id", targets[0].ID)
 	}
 
@@ -223,20 +209,8 @@ func uploadTest(server *speedtest.Server, ch chan<- prometheus.Metric) bool {
 	return true
 }
 
-// New creates an Exporter with a dedicated speedtest client configured for
-// minimal memory usage. SavingMode caps concurrent HTTP connections to 1,
-// which avoids the multi-goroutine download/upload surge that is the primary
-// driver of peak RSS. The client is reused across scrapes to avoid repeated
-// allocation of the HTTP transport and DataManager.
 func New(cfg Config) *Exporter {
-	client := speedtest.New(speedtest.WithUserConfig(&speedtest.UserConfig{
-		// SavingMode sets MaxConnections=1, so download and upload each use
-		// a single goroutine instead of NumCPU goroutines. This is the
-		// biggest lever for reducing peak memory during tests.
-		SavingMode: true,
-	}))
 	return &Exporter{
-		serverID: cfg.ServerID,
-		client:   client,
+		ServerID: cfg.ServerID,
 	}
 }
