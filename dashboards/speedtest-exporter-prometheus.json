@@ -19,7 +19,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 1,
+  "id": 0,
   "links": [
     {
       "asDropdown": false,
@@ -37,8 +37,8 @@
   "panels": [
     {
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "${datasource}"
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "Average download speed",
       "fieldConfig": {
@@ -82,7 +82,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.3.1",
+      "pluginVersion": "12.3.3",
       "targets": [
         {
           "datasource": {
@@ -101,8 +101,8 @@
     },
     {
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "${datasource}"
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "Average upload speed",
       "fieldConfig": {
@@ -146,7 +146,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.3.1",
+      "pluginVersion": "12.3.3",
       "targets": [
         {
           "datasource": {
@@ -166,8 +166,8 @@
     },
     {
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "P4169E866C3094E38"
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "Mean latency in selected time window",
       "fieldConfig": {
@@ -220,7 +220,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.3.1",
+      "pluginVersion": "12.3.3",
       "targets": [
         {
           "editorMode": "code",
@@ -236,8 +236,8 @@
     },
     {
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "${datasource}"
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -316,7 +316,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.1",
+      "pluginVersion": "12.3.3",
       "targets": [
         {
           "datasource": {
@@ -336,8 +336,8 @@
     },
     {
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "${datasource}"
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "description": "Speedtest duration",
       "fieldConfig": {
@@ -413,7 +413,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.1",
+      "pluginVersion": "12.3.3",
       "targets": [
         {
           "datasource": {
@@ -433,8 +433,8 @@
     },
     {
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "${datasource}"
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -512,7 +512,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.1",
+      "pluginVersion": "12.3.3",
       "targets": [
         {
           "datasource": {
@@ -545,8 +545,8 @@
     },
     {
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "${datasource}"
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -727,7 +727,7 @@
           }
         ]
       },
-      "pluginVersion": "12.3.1",
+      "pluginVersion": "12.3.3",
       "targets": [
         {
           "datasource": {
@@ -735,7 +735,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "speedtest_status[$__interval]",
+          "expr": "speedtest_status",
           "format": "table",
           "legendFormat": "__auto",
           "range": true,
@@ -792,8 +792,8 @@
     },
     {
       "datasource": {
-        "type": "victoriametrics-metrics-datasource",
-        "uid": "${datasource}"
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
       },
       "fieldConfig": {
         "defaults": {
@@ -960,7 +960,7 @@
           "zoom": 15
         }
       },
-      "pluginVersion": "12.3.1",
+      "pluginVersion": "12.3.3",
       "targets": [
         {
           "datasource": {
@@ -968,7 +968,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "speedtest_status[$__interval]",
+          "expr": "speedtest_status",
           "format": "table",
           "legendFormat": "__auto",
           "range": true,
@@ -1069,32 +1069,17 @@
     "speedtest"
   ],
   "templating": {
-    "list": [
-      {
-        "current": {
-          "text": "prometheus",
-          "value": "bf9qxg7vzcdtsf"
-        },
-        "description": "Prometheus Datasource",
-        "label": "Data Source",
-        "name": "datasource",
-        "options": [],
-        "query": "prometheus",
-        "refresh": 1,
-        "regex": "",
-        "type": "datasource"
-      }
-    ]
+    "list": []
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-7d",
     "to": "now"
   },
   "timepicker": {
     "nowDelay": ""
   },
   "timezone": "browser",
-  "title": "Speedtest",
-  "uid": "adxxqh2",
-  "version": 28
+  "title": "Speedtest2",
+  "uid": "adxxqh21",
+  "version": 11
 }
