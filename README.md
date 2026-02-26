@@ -1,5 +1,3 @@
-⚠️ **DO NOT USE** - This exporter has a [memory leak issue](https://github.com/veerendra2/speedtest_exporter/issues/14) and should not be used in production until fixed.
-
 # Speedtest Exporter
 
 A Prometheus exporter for monitoring internet speed with [speedtest.net](https://www.speedtest.net/).

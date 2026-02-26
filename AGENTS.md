@@ -151,6 +151,17 @@ if err != nil {
 - All metrics share the namespace `speedtest`.
 - Status metric encodes all run metadata as labels; value encodes overall result (`1` success, `-1` partial, `0` failure).
 
+### speedtest-go SDK Usage Rules
+
+- Always create a `*speedtest.Speedtest` client via `speedtest.New(...)` with `SavingMode: true`; store it in `Exporter`. Never call package-level functions (`speedtest.FetchServers`, `speedtest.FetchUserInfo`) as they share a global client.
+- When `SERVER_ID != 0`, use `client.FetchServerByID(id)` to avoid fetching and pinging the entire server list. Fall back to `client.FetchServers()` only when needed.
+- After each test round, always call **both**:
+  ```go
+  server.Context.Reset()            // clears DataChunks + RateSequence
+  server.Context.Snapshots().Clean() // drops archived snapshots (ring buffer)
+  ```
+  Omitting either causes memory growth across scrapes.
+
 ---
 
 ## Architecture Reference
@@ -158,7 +169,11 @@ if err != nil {
 ### Core Components
 
 - **`main.go`** — HTTP server (`/metrics`), graceful shutdown (SIGINT/SIGTERM, 10 s timeout), Kong CLI parsing, slogger setup, version logging at startup.
-- **`internal/collector/collector.go`** — Prometheus collector; runs ping → download → upload on each scrape; handles server selection with fallback to nearest server.
+- **`internal/collector/collector.go`** — Prometheus collector; runs ping → download → upload on each scrape; handles server selection with fallback to nearest server. Key invariants:
+  - `Exporter` holds a dedicated `*speedtest.Speedtest` client (never use package-level `speedtest.Fetch*` functions).
+  - `server.Context.Reset()` followed by `server.Context.Snapshots().Clean()` **must** be called after every test run to prevent unbounded memory growth.
+  - All three test helpers (`pingTest`, `downloadTest`, `uploadTest`) accept a `context.Context` and call the `*Context` SDK variants — never the plain `PingTest`/`DownloadTest`/`UploadTest`.
+  - `testTimeout = 2 * time.Minute` is applied per `Collect()` call to bound scrape duration.
 
 ### Metrics (namespace: `speedtest`)
 
