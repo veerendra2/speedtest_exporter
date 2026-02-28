@@ -16,7 +16,8 @@ const testTimeout = 2 * time.Minute
 const namespace = "speedtest"
 
 type Config struct {
-	ServerID int `env:"SERVER_ID" default:"0" help:"Speedtest.net server ID (0 = auto-select nearest server)"`
+	ServerID       int `env:"SERVER_ID"       default:"0" help:"Speedtest.net server ID (0 = auto-select nearest server)"`
+	MaxConnections int `env:"MAX_CONNECTIONS" default:"4" help:"Number of parallel TCP streams for bandwidth test (1 = low data usage, 4–8 = accurate)"`
 }
 
 var (
@@ -229,7 +230,8 @@ func New(cfg Config) *Exporter {
 	return &Exporter{
 		serverID: cfg.ServerID,
 		client: speedtest.New(speedtest.WithUserConfig(&speedtest.UserConfig{
-			SavingMode: true,
+			MaxConnections: cfg.MaxConnections,
+			PingMode:       speedtest.TCP,
 		})),
 	}
 }
