@@ -23,6 +23,7 @@ Flags:
   -h, --help                    Show context-sensitive help.
       --address=":8080"         The address where the server should listen on ($ADDRESS).
       --server-id=0             Speedtest.net server ID (0 = auto-select nearest server) ($SERVER_ID)
+      --max-connections=4       Number of parallel TCP streams for bandwidth test ($MAX_CONNECTIONS)
       --log-format="console"    Set the output format of the logs. Must be "console" or "json" ($LOG_FORMAT).
       --log-level=INFO          Set the log level. Must be "DEBUG", "INFO", "WARN" or "ERROR" ($LOG_LEVEL).
       --log-add-source          Whether to add source file and line number to log records ($LOG_ADD_SOURCE).
