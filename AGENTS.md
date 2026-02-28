@@ -153,7 +153,7 @@ if err != nil {
 
 ### speedtest-go SDK Usage Rules
 
-- Always create a `*speedtest.Speedtest` client via `speedtest.New(...)` with `SavingMode: true`; store it in `Exporter`. Never call package-level functions (`speedtest.FetchServers`, `speedtest.FetchUserInfo`) as they share a global client.
+- Always create a `*speedtest.Speedtest` client via `speedtest.New(...)` with `MaxConnections` and `PingMode: speedtest.TCP`; store it in `Exporter`. Never call package-level functions (`speedtest.FetchServers`, `speedtest.FetchUserInfo`) as they share a global client.
 - When `SERVER_ID != 0`, use `client.FetchServerByID(id)` to avoid fetching and pinging the entire server list. Fall back to `client.FetchServers()` only when needed.
 - After each test round, always call **both**:
   ```go
@@ -191,6 +191,7 @@ if err != nil {
 |---|---|---|
 | `ADDRESS` | `:8080` | HTTP listen address |
 | `SERVER_ID` | `0` | speedtest.net server ID (0 = auto-select nearest) |
+| `MAX_CONNECTIONS` | `4` | Parallel TCP streams for bandwidth test (1 = low data usage, 4–8 = accurate) |
 | `LOG_LEVEL` | `info` | Logging level |
 | `LOG_FORMAT` | `json` | Log format (`json` or `console`) |
 
