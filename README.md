@@ -81,10 +81,9 @@ speedtest_upload_speed_bps 5.175917158818312e+07
 
 Pre-built Grafana dashboards are available for both VictoriaMetrics and Prometheus data sources:
 
-| Data Source Type | Dashboard JSON                                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------------- |
-| VictoriaMetrics  | [speedtest-exporter-victoriametrics.json](./dashboards/speedtest-exporter-victoriametrics.json) |
-| Prometheus       | [speedtest-exporter-prometheus.json](./dashboards/speedtest-exporter-prometheus.json)           |
+| Data Source Type | Dashboard JSON                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| Prometheus       | [speedtest-exporter-prometheus.json](./dashboards/speedtest-exporter-prometheus.json) |
 
 ![grafana-dashboard-screenshot.png](./dashboards/grafana-dashboard-screenshot.png)
 
@@ -98,6 +97,12 @@ scrape_configs:
     static_configs:
       - targets: ["speedtest_exporter:8080"]
 ```
+
+## Minimal CPU & Memory Usage
+
+It uses less CPU and memory. (See screenshot below, 5 days of historic data, running in Docker, scraping every hour)
+
+![CPU and Memory Usage Screenshot](./dashboards/speedtest-exporter-cpu-memory-usage.png)
 
 ## Build & Test
 
