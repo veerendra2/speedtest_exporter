@@ -19,7 +19,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 0,
   "links": [
     {
       "asDropdown": false,
@@ -82,7 +81,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.3.3",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -146,7 +145,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.3.3",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -220,7 +219,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "12.3.3",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "editorMode": "code",
@@ -269,7 +268,7 @@
             },
             "showPoints": "auto",
             "showValues": false,
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -316,7 +315,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.3",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -370,7 +369,7 @@
             },
             "showPoints": "auto",
             "showValues": false,
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -413,7 +412,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.3",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -462,14 +461,14 @@
             "lineStyle": {
               "fill": "solid"
             },
-            "lineWidth": 1,
+            "lineWidth": 2,
             "pointSize": 7,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
+            "showPoints": "auto",
             "showValues": false,
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -512,7 +511,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "12.3.3",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -520,7 +519,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "speedtest_download_speed_bps",
+          "expr": "speedtest_download_speed_bps{}",
           "format": "time_series",
           "legendFormat": "Download",
           "range": true,
@@ -534,7 +533,6 @@
           "editorMode": "code",
           "expr": "speedtest_upload_speed_bps",
           "format": "time_series",
-          "hide": false,
           "legendFormat": "Upload",
           "range": true,
           "refId": "B"
@@ -727,7 +725,7 @@
           }
         ]
       },
-      "pluginVersion": "12.3.3",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -960,7 +958,7 @@
           "zoom": 15
         }
       },
-      "pluginVersion": "12.3.3",
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": {
@@ -1079,7 +1077,8 @@
     "nowDelay": ""
   },
   "timezone": "browser",
-  "title": "Speedtest2",
+  "title": "Speedtest Exporter",
   "uid": "adxxqh21",
-  "version": 11
+  "version": 18,
+  "weekStart": ""
 }

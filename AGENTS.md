@@ -65,7 +65,7 @@ Test files must end in `_test.go` and live alongside the package they test (e.g.
 
 ### Language and Toolchain
 
-- **Go** — `go.mod` specifies `go 1.26.0`; Docker dev image uses `golang:1.25.7`.
+- **Go** — `go.mod` specifies `go 1.26.0`; Docker dev image uses `golang:1.26.0`.
 - `CGO_ENABLED=0` is set globally (static binaries only).
 - No linter config file exists; `golangci-lint` runs with its defaults.
 
