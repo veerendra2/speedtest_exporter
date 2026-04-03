@@ -1,6 +1,6 @@
 module github.com/veerendra2/speedtest_exporter
 
-go 1.26.0
+go 1.26.1
 
 require (
 	github.com/alecthomas/kong v1.15.0
