@@ -3,7 +3,7 @@ module github.com/veerendra2/speedtest_exporter
 go 1.26.1
 
 require (
-	github.com/alecthomas/kong v1.14.0
+	github.com/alecthomas/kong v1.15.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/showwin/speedtest-go v1.7.10
 	github.com/veerendra2/gopackages v1.2.3
