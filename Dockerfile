@@ -2,7 +2,7 @@
 # Release versions use distroless images built via GoReleaser with ko
 # See .goreleaser.yml
 #
-FROM golang:1.26.1 AS build
+FROM golang:1.26.2 AS build
 WORKDIR /app
 RUN curl -sL https://taskfile.dev/install.sh | sh
 COPY go.mod go.sum ./
@@ -10,7 +10,7 @@ RUN go mod download
 COPY . .
 RUN /app/bin/task build
 
-FROM alpine:3.23.3
+FROM alpine:3.23.4
 RUN apk update && apk add --no-cache ca-certificates
 WORKDIR /
 COPY --from=build /app/dist/speedtest_exporter .
