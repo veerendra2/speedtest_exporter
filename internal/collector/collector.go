@@ -10,10 +10,10 @@ import (
 	"github.com/showwin/speedtest-go/speedtest"
 )
 
-// testTimeout caps each scrape's speedtest to prevent blocking Prometheus indefinitely.
-const testTimeout = 2 * time.Minute
-
-const namespace = "speedtest"
+const (
+	namespace   = "speedtest"
+	testTimeout = 2 * time.Minute
+)
 
 type Config struct {
 	ServerID       int `env:"SERVER_ID"       default:"0" help:"Speedtest.net server ID (0 = auto-select nearest server)"`
