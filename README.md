@@ -108,16 +108,16 @@ scrape_configs:
     scrape_interval: 1h
     scrape_timeout: 2m
     params:
-      server_id: ["1234"]  # Override SERVER_ID env var for this job
+      server_id: ["1234"] # Override SERVER_ID env var for this job
     static_configs:
       - targets: ["speedtest_exporter:8080"]
 ```
 
 **Note:** Query parameter `server_id` takes precedence over the `SERVER_ID` environment variable. If the specified server is unavailable, the exporter automatically selects the nearest server.
 
-## Minimal CPU & Memory Usage
+## Resource Efficiency
 
-It uses less CPU and memory. (See screenshot below, 5 days of historic data, running in Docker, scraping every hour)
+Minimal CPU and memory footprint. The screenshot below shows 5 days of data (Docker, hourly scrapes):
 
 ![CPU and Memory Usage Screenshot](./dashboards/speedtest-exporter-cpu-memory-usage.png)
 
