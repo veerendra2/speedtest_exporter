@@ -4,19 +4,25 @@
   "metadata": {
     "name": "adxxqh211",
     "namespace": "default",
-    "uid": "97bbda37-85ca-40f4-99e8-485356d32469",
-    "resourceVersion": "1779828018711014",
-    "generation": 17,
-    "creationTimestamp": "2026-05-26T20:17:40Z",
+    "uid": "ae4bc26b-9e66-4900-a43a-63c74390e91f",
+    "resourceVersion": "1780344229392010",
+    "generation": 2,
+    "creationTimestamp": "2026-06-01T20:01:13Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "1223360957657088"
+      "grafana.app/deprecatedInternalID": "3393548917424128"
     },
     "annotations": {
-      "grafana.app/createdBy": "user:cfm901eczxvcwa",
+      "grafana.app/createdBy": "access-policy:service",
       "grafana.app/folder": "",
+      "grafana.app/managedBy": "classic-file-provisioning",
+      "grafana.app/managerAllowsEdits": "true",
+      "grafana.app/managerId": "Prometheus",
       "grafana.app/saved-from-ui": "Grafana v13.0.1+security-01 (9bbe672d)",
-      "grafana.app/updatedBy": "user:cfm901eczxvcwa",
-      "grafana.app/updatedTimestamp": "2026-05-26T20:40:18Z"
+      "grafana.app/sourceChecksum": "06c35aa2e733ee3ee0b1a1943700d2da",
+      "grafana.app/sourcePath": "/etc/grafana/dashboards/speedtest-exporter-prometheus.json",
+      "grafana.app/sourceTimestamp": "1780344027000",
+      "grafana.app/updatedBy": "user:afnuqej00vls0c",
+      "grafana.app/updatedTimestamp": "2026-06-01T20:03:49Z"
     }
   },
   "spec": {
@@ -616,7 +622,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "speedtest_latency_seconds",
+                        "expr": "avg_over_time(speedtest_latency_seconds[$__interval])",
                         "format": "time_series",
                         "legendFormat": "Latency",
                         "range": true
