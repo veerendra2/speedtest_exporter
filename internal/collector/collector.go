@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/showwin/speedtest-go/speedtest"
 )
 
@@ -224,6 +227,22 @@ func uploadTest(ctx context.Context, server *speedtest.Server, ch chan<- prometh
 	)
 
 	return true
+}
+
+func NewMetricsHandler(exporter *Exporter) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		serverIDParam := r.URL.Query().Get("server_id")
+		if serverIDParam != "" {
+			if id, err := strconv.Atoi(serverIDParam); err == nil {
+				originalServerID := exporter.serverID
+				exporter.serverID = id
+				defer func() { exporter.serverID = originalServerID }()
+			} else {
+				slog.Warn("Invalid server_id parameter", "value", serverIDParam, "error", err)
+			}
+		}
+		promhttp.Handler().ServeHTTP(w, r)
+	})
 }
 
 func New(cfg Config) *Exporter {

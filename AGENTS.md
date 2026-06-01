@@ -195,6 +195,18 @@ if err != nil {
 | `LOG_LEVEL` | `info` | Logging level |
 | `LOG_FORMAT` | `json` | Log format (`json` or `console`) |
 
+### Query Parameters
+
+The `/metrics` endpoint accepts an optional `server_id` query parameter to override the configured `SERVER_ID` for a single scrape:
+
+```
+GET /metrics?server_id=1234
+```
+
+**Precedence:** Query parameter `server_id` takes precedence over the `SERVER_ID` environment variable.
+
+**Fallback behavior:** If the specified server ID (from query param or env var) is not found, the exporter automatically selects the nearest server.
+
 ### Version Injection (ldflags)
 
 Build-time version info is injected into `github.com/veerendra2/gopackages/version`:

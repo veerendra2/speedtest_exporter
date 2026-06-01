@@ -13,7 +13,6 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/veerendra2/gopackages/slogger"
 	"github.com/veerendra2/gopackages/version"
 	"github.com/veerendra2/speedtest_exporter/internal/collector"
@@ -58,7 +57,7 @@ func main() {
 			slog.Warn("Failed to write", "error", err)
 		}
 	})
-	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/metrics", collector.NewMetricsHandler(sClient))
 
 	server := &http.Server{
 		Addr:              cli.Address,
@@ -83,6 +82,7 @@ func main() {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM)
 
+	slog.Info("Listening", "address", cli.Address)
 	slog.Debug("Start listening for SIGINT and SIGTERM signal.")
 	<-done
 	slog.Info("Shutdown started.")
