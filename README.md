@@ -98,6 +98,23 @@ scrape_configs:
       - targets: ["speedtest_exporter:8080"]
 ```
 
+### Using Query Parameters for Server Selection
+
+Override the server ID on a per-scrape basis by adding `params` to the scrape config:
+
+```yaml
+scrape_configs:
+  - job_name: "speedtest"
+    scrape_interval: 1h
+    scrape_timeout: 2m
+    params:
+      server_id: ["1234"]  # Override SERVER_ID env var for this job
+    static_configs:
+      - targets: ["speedtest_exporter:8080"]
+```
+
+**Note:** Query parameter `server_id` takes precedence over the `SERVER_ID` environment variable. If the specified server is unavailable, the exporter automatically selects the nearest server.
+
 ## Minimal CPU & Memory Usage
 
 It uses less CPU and memory. (See screenshot below, 5 days of historic data, running in Docker, scraping every hour)

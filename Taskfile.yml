@@ -33,6 +33,7 @@ tasks:
       LOG_FORMAT: console
       LOG_ADD_SOURCE: false
       LOG_LEVEL: debug
+      SERVER_ID: 17301
 
   lint:
     desc: "Run static analysis and code linting using golangci-lint"
