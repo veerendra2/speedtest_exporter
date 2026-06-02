@@ -63,8 +63,9 @@ var (
 )
 
 type Exporter struct {
-	serverID int
-	client   *speedtest.Speedtest
+	serverID       int
+	client         *speedtest.Speedtest
+	metricsHandler http.Handler
 }
 
 // Describe describes all the metrics. It implements prometheus.Collector.
@@ -146,6 +147,7 @@ func (e *Exporter) runSpeedTest(ctx context.Context, ch chan<- prometheus.Metric
 			return successCount, nil, nil
 		}
 		server = targets[0]
+		serverList = nil
 	}
 
 	slog.Debug("Starting speedtest...",
@@ -230,6 +232,7 @@ func uploadTest(ctx context.Context, server *speedtest.Server, ch chan<- prometh
 }
 
 func NewMetricsHandler(exporter *Exporter) http.Handler {
+	prometheusHandler := promhttp.Handler()
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		serverIDParam := r.URL.Query().Get("server_id")
 		if serverIDParam != "" {
@@ -241,16 +244,18 @@ func NewMetricsHandler(exporter *Exporter) http.Handler {
 				slog.Warn("Invalid server_id parameter", "value", serverIDParam, "error", err)
 			}
 		}
-		promhttp.Handler().ServeHTTP(w, r)
+		prometheusHandler.ServeHTTP(w, r)
 	})
 }
 
 func New(cfg Config) *Exporter {
-	return &Exporter{
+	exporter := &Exporter{
 		serverID: cfg.ServerID,
 		client: speedtest.New(speedtest.WithUserConfig(&speedtest.UserConfig{
 			MaxConnections: cfg.MaxConnections,
 			PingMode:       speedtest.TCP,
 		})),
 	}
+	exporter.metricsHandler = NewMetricsHandler(exporter)
+	return exporter
 }
