@@ -1,8 +1,21 @@
 # Speedtest Exporter
 
-A Prometheus exporter for monitoring internet speed with [speedtest.net](https://www.speedtest.net/).
+<p align="center">
+  <img src="./assets/speedtest.png" width="90"/>
+  <img src="./assets/prometheus.png" width="83"/>
+  <br>
+</p>
+<p align="center">A Prometheus exporter for monitoring internet speed with <a href="https://speedtest.net">speedtest.net</a>.</p>
 
-> _Inspired by [danopstech/speedtest_exporter](https://github.com/danopstech/speedtest_exporter) which is no longer actively maintained._
+<p align="center">
+  <a href="https://github.com/veerendra2/speedtest_exporter/actions/workflows/ci.yml"><img src="https://github.com/veerendra2/speedtest_exporter/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/veerendra2/speedtest_exporter/actions/workflows/release.yml"><img src="https://github.com/veerendra2/speedtest_exporter/actions/workflows/release.yml/badge.svg" alt="Release"></a>
+  <a href="https://github.com/veerendra2/speedtest_exporter/releases/latest"><img src="https://img.shields.io/github/v/release/veerendra2/speedtest_exporter" alt="Latest Release"></a>
+  <a href="https://github.com/veerendra2/speedtest_exporter/blob/main/LICENSE"><img src="https://img.shields.io/github/license/veerendra2/speedtest_exporter" alt="License"></a>
+  <a href="https://github.com/veerendra2/speedtest_exporter/stargazers"><img src="https://img.shields.io/github/stars/veerendra2/speedtest_exporter" alt="GitHub stars"></a>
+  <a href="https://github.com/veerendra2/speedtest_exporter/network/members"><img src="https://img.shields.io/github/forks/veerendra2/speedtest_exporter" alt="GitHub forks"></a>
+  <a href="https://ghcr.io/veerendra2/speedtest_exporter"><img src="https://img.shields.io/badge/ghcr.io-amd64%20%7C%20arm64-blue?style=flat&logo=docker&logoColor=white" alt="Docker"></a>
+</p>
 
 ## Features
 
@@ -12,7 +25,9 @@ A Prometheus exporter for monitoring internet speed with [speedtest.net](https:/
 - Auto-selects nearest server when not specified or if requested server is unavailable
 - Includes geographical metadata (user/server location)
 
-## Quick Start
+## Deployment
+
+### Usage
 
 ```bash
 Usage: speedtest_exporter [flags]
@@ -38,7 +53,7 @@ Flags:
 docker run -d -p 8080:8080 ghcr.io/veerendra2/speedtest_exporter:latest
 ```
 
-Docker Compose
+#### Docker Compose
 
 ```yaml
 ---
@@ -53,9 +68,9 @@ services:
     hostname: speedtest_exporter
 ```
 
-## Metrics
+## Exported Metrics
 
-```
+```text
 # HELP speedtest_download_speed_bps Download speed in bits per second.
 # TYPE speedtest_download_speed_bps gauge
 speedtest_download_speed_bps 2.64761758619317e+08
@@ -77,15 +92,15 @@ speedtest_status{distance="121.286353",server_country="Germany",server_id="17982
 speedtest_upload_speed_bps 5.175917158818312e+07
 ```
 
-## Dashboard
+## Grafana Dashboard
 
 Pre-built Grafana dashboards are available for both VictoriaMetrics and Prometheus data sources:
 
-| Data Source Type | Dashboard JSON                                                                        |
-| ---------------- | ------------------------------------------------------------------------------------- |
-| Prometheus       | [speedtest-exporter-prometheus.json](./dashboards/speedtest-exporter-prometheus.json) |
+| Data Source Type | Dashboard JSON                                                                    |
+| ---------------- | --------------------------------------------------------------------------------- |
+| Prometheus       | [speedtest-exporter-prometheus.json](./assets/speedtest-exporter-prometheus.json) |
 
-![grafana-dashboard-screenshot.png](./dashboards/grafana-dashboard-screenshot.png)
+![grafana-dashboard-screenshot.png](./assets/grafana-dashboard-screenshot.png)
 
 ## Prometheus Configuration
 
@@ -119,11 +134,13 @@ scrape_configs:
 
 Minimal CPU and memory footprint. The screenshot below shows 5 days of data (Docker, hourly scrapes):
 
-![CPU and Memory Usage Screenshot](./dashboards/speedtest-exporter-cpu-memory-usage.png)
+![CPU and Memory Usage Screenshot](./assets/speedtest-exporter-cpu-memory-usage.png)
 
-## Build & Test
+## Development
 
-- Using [Taskfile](https://taskfile.dev/)
+### Build & Test
+
+#### Using Taskfile
 
 _Install Taskfile: [Installation Guide](https://taskfile.dev/docs/installation)_
 
@@ -144,7 +161,7 @@ task: Available tasks for this project:
 * vet:                   Examines Go source code and reports suspicious constructs
 ```
 
-- Build with [goreleaser](https://goreleaser.com/)
+#### Using GoReleaser
 
 _Install GoReleaser: [Installation Guide](https://goreleaser.com/install/)_
 
@@ -154,8 +171,12 @@ goreleaser release --snapshot --clean
 ...
 ```
 
-- Dev compose stack
+#### Dev Compose Stack
 
 ```bash
 docker compose -f compose-dev.yml up --build --force-recreate -d
 ```
+
+---
+
+> _Inspired by [danopstech/speedtest_exporter](https://github.com/danopstech/speedtest_exporter) which is no longer actively maintained._
