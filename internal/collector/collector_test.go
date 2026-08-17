@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/showwin/speedtest-go/speedtest"
@@ -20,16 +21,17 @@ func TestSpeedTestsNegativeValues(t *testing.T) {
 	server.DLSpeed = -1
 	server.ULSpeed = -1
 
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
 	ch := make(chan prometheus.Metric, 10)
 
-	// Since Context is attached, the functions run their test contexts against an unreachable host
-	// resulting in errors or negative speed, which should both return false without panic or metric emission.
-	if downloadTest(context.Background(), server, ch) {
-		t.Errorf("downloadTest() returned true for negative DLSpeed, expected false")
+	if downloadTest(ctx, server, ch) {
+		t.Errorf("downloadTest() returned true for negative DLSpeed/failure, expected false")
 	}
 
-	if uploadTest(context.Background(), server, ch) {
-		t.Errorf("uploadTest() returned true for negative ULSpeed, expected false")
+	if uploadTest(ctx, server, ch) {
+		t.Errorf("uploadTest() returned true for negative ULSpeed/failure, expected false")
 	}
 
 	close(ch)
@@ -53,17 +55,9 @@ func TestStatusComputation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var statusValue float64
-			switch tt.successCount {
-			case 3:
-				statusValue = 1.0
-			case 0:
-				statusValue = 0.0
-			default:
-				statusValue = -1.0
-			}
-			if statusValue != tt.wantStatus {
-				t.Errorf("got %v, want %v", statusValue, tt.wantStatus)
+			got := statusValue(tt.successCount)
+			if got != tt.wantStatus {
+				t.Errorf("statusValue(%d) = %v, want %v", tt.successCount, got, tt.wantStatus)
 			}
 		})
 	}
