@@ -132,7 +132,7 @@ if err != nil {
 
 - Use `log/slog` for all structured logging throughout the codebase.
 - Log levels: `DEBUG`, `INFO`, `WARN`, `ERROR`.
-- Always pass the error as a structured key: `"error", err`.
+- When logging an `error` value, always pass it as a structured key: `"error", err`.
 - Debug logs should include progress and intermediate results (speeds, latency).
 - Logger is configured at startup via `slogger.Config`; log format and level are controlled by `LOG_FORMAT` and `LOG_LEVEL` env vars.
 
