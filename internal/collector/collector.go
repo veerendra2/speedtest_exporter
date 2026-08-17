@@ -198,8 +198,12 @@ func pingTest(ctx context.Context, server *speedtest.Server, ch chan<- prometheu
 
 func downloadTest(ctx context.Context, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
 	err := server.DownloadTestContext(ctx)
-	if err != nil {
-		slog.Error("Failed to run download test", "error", err)
+	if err != nil || server.DLSpeed < 0 {
+		if err != nil {
+			slog.Error("Failed to run download test", "error", err)
+		} else {
+			slog.Error("Download test returned invalid speed", "download_speed", server.DLSpeed)
+		}
 		return false
 	}
 
@@ -216,8 +220,12 @@ func downloadTest(ctx context.Context, server *speedtest.Server, ch chan<- prome
 
 func uploadTest(ctx context.Context, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
 	err := server.UploadTestContext(ctx)
-	if err != nil {
-		slog.Error("Failed to run upload test", "error", err)
+	if err != nil || server.ULSpeed < 0 {
+		if err != nil {
+			slog.Error("Failed to run upload test", "error", err)
+		} else {
+			slog.Error("Upload test returned invalid speed", "upload_speed", server.ULSpeed)
+		}
 		return false
 	}
 	slog.Debug("Upload test completed",
