@@ -77,32 +77,32 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- download
 }
 
+// statusValue maps the number of successful sub-tests (ping, download, upload)
+// to a Prometheus status metric value.
+func statusValue(successCount int) float64 {
+	switch successCount {
+	case 3:
+		return 1.0
+	case 0:
+		return 0.0
+	default:
+		return -1.0
+	}
+}
+
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	start := time.Now()
-	var statusValue float64
 
 	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
 	defer cancel()
 
 	successCount, user, server := e.runSpeedTest(ctx, ch)
-
-	// Determine status based on successCount:
-	// 0     	 - All tests failed                    	  -> Metric Value: 0
-	// 1 or 2  - Some tests succeeded (partial success) -> Metric Value: -1
-	// 3     	 - All tests succeeded                 	  -> Metric Value: 1
-	switch successCount {
-	case 3:
-		statusValue = 1.0
-	case 0:
-		statusValue = 0.0
-	default:
-		statusValue = -1.0
-	}
+	statVal := statusValue(successCount)
 
 	labels := []string{
 		"N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A",
 	}
-	if statusValue != 0.0 {
+	if statVal != 0.0 {
 		labels = []string{
 			user.Lat, user.Lon, user.IP, user.Isp,
 			server.Lat, server.Lon, server.ID, server.Host, server.Country,
@@ -110,7 +110,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
-	ch <- prometheus.MustNewConstMetric(status, prometheus.GaugeValue, statusValue, labels...)
+	ch <- prometheus.MustNewConstMetric(status, prometheus.GaugeValue, statVal, labels...)
 	ch <- prometheus.MustNewConstMetric(scrapeDurationSeconds, prometheus.GaugeValue, time.Since(start).Seconds())
 }
 
@@ -202,6 +202,10 @@ func downloadTest(ctx context.Context, server *speedtest.Server, ch chan<- prome
 		slog.Error("Failed to run download test", "error", err)
 		return false
 	}
+	if server.DLSpeed < 0 {
+		slog.Error("Download test returned invalid speed", "download_speed", server.DLSpeed)
+		return false
+	}
 
 	slog.Debug("Download test completed",
 		"download_speed", server.DLSpeed,
@@ -220,6 +224,11 @@ func uploadTest(ctx context.Context, server *speedtest.Server, ch chan<- prometh
 		slog.Error("Failed to run upload test", "error", err)
 		return false
 	}
+	if server.ULSpeed < 0 {
+		slog.Error("Upload test returned invalid speed", "upload_speed", server.ULSpeed)
+		return false
+	}
+
 	slog.Debug("Upload test completed",
 		"upload_speed", server.ULSpeed,
 	)

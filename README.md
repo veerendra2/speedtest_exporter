@@ -130,9 +130,9 @@ scrape_configs:
 
 **Note:** Query parameter `server_id` takes precedence over the `SERVER_ID` environment variable. If the specified server is unavailable, the exporter automatically selects the nearest server.
 
-## Resource Efficiency
+## Resource Usage
 
-Minimal CPU and memory footprint. The screenshot below shows 5 days of data (Docker, hourly scrapes):
+CPU and memory usage over a 30-day window (Docker, hourly scrapes):
 
 ![CPU and Memory Usage Screenshot](./assets/speedtest-exporter-cpu-memory-usage.png)
 
