@@ -5,7 +5,7 @@ go 1.26.6
 require (
 	github.com/alecthomas/kong v1.16.1
 	github.com/prometheus/client_golang v1.24.1
-	github.com/showwin/speedtest-go v1.7.11
+	github.com/showwin/speedtest-go v1.8.2
 	github.com/veerendra2/gopackages v1.2.3
 )
 
