@@ -2,7 +2,7 @@
   "apiVersion": "dashboard.grafana.app/v2",
   "kind": "Dashboard",
   "metadata": {
-    "name": "adxxqh211",
+    "name": "speedtest-exporter-victoriametrics",
     "namespace": "default",
     "uid": "c5974e28-2177-45ca-8e85-a652ec82bcaf",
     "resourceVersion": "1781531579350997",
@@ -74,7 +74,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "speedtest_download_speed_bps{}",
+                        "expr": "avg(speedtest_download_speed_bps{job=~\"$job\",target=~\"$target\"})",
                         "format": "time_series",
                         "legendFormat": "Download",
                         "range": true
@@ -96,7 +96,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "speedtest_upload_speed_bps",
+                        "expr": "avg(speedtest_upload_speed_bps{job=~\"$job\",target=~\"$target\"})",
                         "format": "time_series",
                         "legendFormat": "Upload",
                         "range": true
@@ -215,7 +215,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "avg_over_time(speedtest_download_speed_bps[$__interval])",
+                        "expr": "avg(avg_over_time(speedtest_download_speed_bps{job=~\"$job\",target=~\"$target\"}[$__interval]))",
                         "format": "time_series",
                         "range": true
                       }
@@ -307,7 +307,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "avg_over_time(speedtest_upload_speed_bps[$__interval])",
+                        "expr": "avg(avg_over_time(speedtest_upload_speed_bps{job=~\"$job\",target=~\"$target\"}[$__interval]))",
                         "format": "time_series",
                         "legendFormat": "__auto",
                         "range": true
@@ -400,7 +400,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "avg_over_time(speedtest_latency_seconds[$__interval])",
+                        "expr": "avg(avg_over_time(speedtest_latency_seconds{job=~\"$job\",target=~\"$target\"}[$__interval]))",
                         "format": "time_series",
                         "legendFormat": "__auto",
                         "range": true
@@ -502,9 +502,9 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "avg_over_time(speedtest_scrape_duration_seconds[$__interval])",
+                        "expr": "avg(avg_over_time(speedtest_probe_duration_seconds{job=~\"$job\",target=~\"$target\"}[$__interval]))",
                         "format": "time_series",
-                        "legendFormat": "Latency",
+                        "legendFormat": "Duration",
                         "range": true
                       }
                     },
@@ -603,7 +603,7 @@
         "kind": "Panel",
         "spec": {
           "id": 2,
-          "title": "Latency",
+          "title": "Latency Over Time",
           "description": "",
           "links": [],
           "data": {
@@ -622,7 +622,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "avg_over_time(speedtest_latency_seconds[$__interval])",
+                        "expr": "avg(avg_over_time(speedtest_latency_seconds{job=~\"$job\",target=~\"$target\"}[$__interval]))",
                         "format": "time_series",
                         "legendFormat": "Latency",
                         "range": true
@@ -723,7 +723,7 @@
         "kind": "Panel",
         "spec": {
           "id": 8,
-          "title": "Speedtest History",
+          "title": "Latest Speedtest Per Target",
           "description": "",
           "links": [],
           "data": {
@@ -743,11 +743,11 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "avg_over_time(speedtest_status[$__interval])",
+                        "expr": "speedtest_status{job=~\"$job\",target=~\"$target\"}",
                         "format": "table",
-                        "instant": false,
+                        "instant": true,
                         "legendFormat": "__auto",
-                        "range": true
+                        "range": false
                       }
                     },
                     "refId": "A",
@@ -763,6 +763,7 @@
                     "options": {
                       "include": {
                         "names": [
+                          "target",
                           "Time",
                           "distance",
                           "server_country",
@@ -784,14 +785,15 @@
                       "excludeByName": {},
                       "includeByName": {},
                       "indexByName": {
-                        "Time": 0,
-                        "Value": 7,
-                        "distance": 1,
-                        "server_country": 3,
-                        "server_id": 2,
-                        "server_name": 4,
-                        "user_ip": 5,
-                        "user_isp": 6
+                        "target": 0,
+                        "Time": 1,
+                        "distance": 2,
+                        "server_id": 3,
+                        "server_country": 4,
+                        "server_name": 5,
+                        "user_ip": 6,
+                        "user_isp": 7,
+                        "Value": 8
                       },
                       "renameByName": {
                         "Value": "Status",
@@ -800,7 +802,8 @@
                         "server_id": "Server ID",
                         "server_name": "Server Name",
                         "user_ip": "User IP",
-                        "user_isp": "User ISP"
+                        "user_isp": "User ISP",
+                        "target": "Target"
                       }
                     }
                   }
@@ -1013,7 +1016,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "avg_over_time(speedtest_status[$__interval])",
+                        "expr": "avg_over_time(speedtest_status{job=~\"$job\",target=~\"$target\"}[$__interval])",
                         "format": "table",
                         "legendFormat": "__auto",
                         "range": true
@@ -1137,7 +1140,7 @@
                   "showAttribution": true,
                   "showDebug": false,
                   "showMeasure": false,
-                  "showScale": false,
+                  "showScale": true,
                   "showZoom": true
                 },
                 "layers": [
@@ -1146,7 +1149,7 @@
                       "showLegend": true,
                       "style": {
                         "color": {
-                          "fixed": "dark-blue"
+                          "fixed": "red"
                         },
                         "opacity": 0.9,
                         "rotation": {
@@ -1156,12 +1159,12 @@
                           "mode": "mod"
                         },
                         "size": {
-                          "fixed": 10,
-                          "max": 15,
-                          "min": 2
+                          "fixed": 16,
+                          "min": 2,
+                          "max": 30
                         },
                         "symbol": {
-                          "fixed": "img/icons/marker/circle.svg",
+                          "fixed": "img/icons/marker/star.svg",
                           "mode": "fixed"
                         },
                         "symbolAlign": {
@@ -1181,7 +1184,7 @@
                         }
                       }
                     },
-                    "layer-tooltip": false,
+                    "layer-tooltip": true,
                     "location": {
                       "latitude": "server_lat",
                       "longitude": "server_lon",
@@ -1196,7 +1199,7 @@
                       "showLegend": true,
                       "style": {
                         "color": {
-                          "fixed": "dark-green"
+                          "fixed": "light-blue"
                         },
                         "opacity": 0.8,
                         "rotation": {
@@ -1207,11 +1210,11 @@
                         },
                         "size": {
                           "fixed": 10,
-                          "max": 15,
-                          "min": 2
+                          "min": 2,
+                          "max": 30
                         },
                         "symbol": {
-                          "fixed": "img/icons/marker/triangle.svg",
+                          "fixed": "img/icons/marker/circle.svg",
                           "mode": "fixed"
                         },
                         "symbolAlign": {
@@ -1243,7 +1246,7 @@
                   }
                 ],
                 "tooltip": {
-                  "mode": "none"
+                  "mode": "details"
                 },
                 "view": {
                   "allLayers": true,
@@ -1286,6 +1289,42 @@
             }
           }
         }
+      },
+      "panel-14": {
+        "kind": "Panel",
+        "spec": {
+          "id": 14,
+          "title": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "text",
+            "version": "13.0.2",
+            "spec": {
+              "options": {
+                "code": {
+                  "language": "markdown",
+                  "showLineNumbers": false,
+                  "showMiniMap": false
+                },
+                "content": "ℹ️ **Speed test results are averaged across all targets when `Target=All` is selected.** Pick a single target to see it on its own — the table and map always show every target.",
+                "mode": "markdown"
+              },
+              "fieldConfig": {
+                "defaults": {},
+                "overrides": []
+              }
+            }
+          }
+        }
       }
     },
     "layout": {
@@ -1296,7 +1335,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 0,
-              "y": 0,
+              "y": 2,
               "width": 3,
               "height": 6,
               "element": {
@@ -1309,7 +1348,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 3,
-              "y": 0,
+              "y": 2,
               "width": 3,
               "height": 6,
               "element": {
@@ -1322,7 +1361,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 6,
-              "y": 0,
+              "y": 2,
               "width": 3,
               "height": 6,
               "element": {
@@ -1335,7 +1374,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 9,
-              "y": 0,
+              "y": 2,
               "width": 9,
               "height": 6,
               "element": {
@@ -1348,7 +1387,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 18,
-              "y": 0,
+              "y": 2,
               "width": 6,
               "height": 6,
               "element": {
@@ -1361,7 +1400,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 0,
-              "y": 6,
+              "y": 8,
               "width": 24,
               "height": 9,
               "element": {
@@ -1374,7 +1413,7 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 0,
-              "y": 15,
+              "y": 17,
               "width": 13,
               "height": 13,
               "element": {
@@ -1387,12 +1426,25 @@
             "kind": "GridLayoutItem",
             "spec": {
               "x": 13,
-              "y": 15,
+              "y": 17,
               "width": 11,
               "height": 13,
               "element": {
                 "kind": "ElementReference",
                 "name": "panel-9"
+              }
+            }
+          },
+          {
+            "kind": "GridLayoutItem",
+            "spec": {
+              "x": 0,
+              "y": 0,
+              "width": 24,
+              "height": 2,
+              "element": {
+                "kind": "ElementReference",
+                "name": "panel-14"
               }
             }
           }
@@ -1420,9 +1472,9 @@
     ],
     "timeSettings": {
       "timezone": "browser",
-      "from": "now-7d",
+      "from": "now-24h",
       "to": "now",
-      "autoRefresh": "",
+      "autoRefresh": "5m",
       "autoRefreshIntervals": [
         "5s",
         "10s",
@@ -1438,7 +1490,7 @@
       "hideTimepicker": false,
       "fiscalYearStartMonth": 0
     },
-    "title": "Speedtest Exporter",
+    "title": "Speedtest Exporter (VictoriaMetrics)",
     "variables": [
       {
         "kind": "DatasourceVariable",
@@ -1448,8 +1500,8 @@
           "refresh": "onDashboardLoad",
           "regex": "",
           "current": {
-            "text": "VictoriaMetrics",
-            "value": "victoriametrics"
+            "text": "",
+            "value": ""
           },
           "options": [],
           "multi": false,
@@ -1465,8 +1517,8 @@
         "spec": {
           "name": "job",
           "current": {
-            "text": "",
-            "value": ""
+            "text": "All",
+            "value": "$__all"
           },
           "label": "Job",
           "hide": "dontHide",
@@ -1477,7 +1529,7 @@
             "group": "victoriametrics-metrics-datasource",
             "version": "v0",
             "datasource": {
-              "name": "victoriametrics"
+              "name": "${datasource}"
             },
             "spec": {
               "qryType": 1,
@@ -1491,10 +1543,46 @@
           "definition": "label_values(speedtest_status,job)",
           "options": [],
           "multi": false,
-          "includeAll": false,
+          "includeAll": true,
+          "allowCustomValue": true
+        }
+      },
+      {
+        "kind": "QueryVariable",
+        "spec": {
+          "name": "target",
+          "current": {
+            "text": "All",
+            "value": "$__all"
+          },
+          "label": "Target",
+          "hide": "dontHide",
+          "refresh": "onDashboardLoad",
+          "skipUrlSync": false,
+          "query": {
+            "kind": "DataQuery",
+            "group": "victoriametrics-metrics-datasource",
+            "version": "v0",
+            "datasource": {
+              "name": "${datasource}"
+            },
+            "spec": {
+              "qryType": 1,
+              "query": "label_values(speedtest_status{job=~\"$job\"}, target)",
+              "refId": "VariableQueryEditor-VariableQuery"
+            }
+          },
+          "regex": "",
+          "regexApplyTo": "value",
+          "sort": "disabled",
+          "definition": "label_values(speedtest_status{job=~\"$job\"}, target)",
+          "options": [],
+          "multi": true,
+          "includeAll": true,
           "allowCustomValue": true
         }
       }
-    ]
+    ],
+    "refresh": "5m"
   }
 }

@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/veerendra2/gopackages/slogger"
 	"github.com/veerendra2/gopackages/version"
 	"github.com/veerendra2/speedtest_exporter/internal/collector"
@@ -49,21 +49,21 @@ func main() {
 	slog.Info("Version information", version.Info()...)
 	slog.Info("Build context", version.BuildContext()...)
 
-	sClient := collector.New(cli.Collector)
-
-	prometheus.MustRegister(sClient)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if _, err := w.Write([]byte("<body>Metrics are available at <a href=\"/metrics\">/metrics</a></body>")); err != nil {
+		if _, err := w.Write([]byte("<body>Metrics are available at <a href=\"/metrics\">/metrics</a>, probes at <a href=\"/probe?target=test\">/probe</a></body>")); err != nil {
 			slog.Warn("Failed to write", "error", err)
 		}
 	})
-	http.Handle("/metrics", collector.NewMetricsHandler(sClient))
+	// /metrics serves the exporter's own metrics only. A speedtest runs on
+	// /probe, so a scrape of /metrics can never block for minutes.
+	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/probe", collector.Handler(cli.Collector))
 
 	server := &http.Server{
 		Addr:              cli.Address,
 		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       3 * time.Minute,
-		WriteTimeout:      3 * time.Minute,
+		ReadTimeout:       collector.ProbeTimeout + time.Minute,
+		WriteTimeout:      collector.ProbeTimeout + time.Minute,
 		IdleTimeout:       2 * time.Minute,
 	}
 
@@ -72,7 +72,7 @@ func main() {
 			slog.Error("Server died unexpectedly.", "error", err)
 			return
 		}
-		slog.Error("Server stopped.")
+		slog.Info("Server stopped.")
 	}()
 
 	// All components should be terminated gracefully. For that we listen
@@ -87,7 +87,9 @@ func main() {
 	<-done
 	slog.Info("Shutdown started.")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// Longer than one probe, so an in-flight speedtest finishes instead of
+	// being killed by the shutdown deadline.
+	ctx, cancel := context.WithTimeout(context.Background(), collector.ProbeTimeout+10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {

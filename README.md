@@ -19,8 +19,7 @@
 
 ## Features
 
-- Measures download/upload speeds and latency
-- Exports metrics in Prometheus format
+- Uses the [multi-target exporter pattern](https://prometheus.io/docs/guides/multi-target-exporter/): every scrape runs one probe against one speedtest.net server, so one exporter can measure several servers
 - Supports specific speedtest.net server selection (uses [speedtest.net API](https://www.speedtest.net/api/js/servers) via [speedtest-go](https://github.com/showwin/speedtest-go.git))
 - Auto-selects nearest server when not specified or if requested server is unavailable
 - Includes geographical metadata (user/server location)
@@ -37,7 +36,6 @@ A Prometheus exporter for monitoring internet speed with speedtest.net
 Flags:
   -h, --help                    Show context-sensitive help.
       --address=":8080"         The address where the server should listen on ($ADDRESS).
-      --server-id=0             Speedtest.net server ID (0 = auto-select nearest server) ($SERVER_ID)
       --max-connections=4       Number of parallel TCP streams for bandwidth test ($MAX_CONNECTIONS)
       --log-format="console"    Set the output format of the logs. Must be "console" or "json" ($LOG_FORMAT).
       --log-level=INFO          Set the log level. Must be "DEBUG", "INFO", "WARN" or "ERROR" ($LOG_LEVEL).
@@ -68,37 +66,54 @@ services:
     hostname: speedtest_exporter
 ```
 
+## Endpoints
+
+| Endpoint                       | What it does                                                        |
+| ------------------------------ | ------------------------------------------------------------------- |
+| `/probe?target=<name>`         | Runs one speedtest and returns its metrics. Add `&server_id=1234` to pick a server for this scrape. |
+| `/metrics`                     | The exporter's own metrics (Go runtime, process). Never runs a speedtest. |
+
+`target` is a name you choose; it becomes the `target` label on every metric
+from that probe, so one exporter can measure several servers side by side.
+
 ## Exported Metrics
 
 ```text
 # HELP speedtest_download_speed_bps Download speed in bits per second.
 # TYPE speedtest_download_speed_bps gauge
-speedtest_download_speed_bps 2.64761758619317e+08
+speedtest_download_speed_bps{target="nearest"} 2.64761758619317e+08
 
 # HELP speedtest_latency_seconds Network latency to the speedtest server in seconds.
 # TYPE speedtest_latency_seconds gauge
-speedtest_latency_seconds 0.028449016
+speedtest_latency_seconds{target="nearest"} 0.028449016
 
-# HELP speedtest_scrape_duration_seconds Total time taken to complete the speedtest.
-# TYPE speedtest_scrape_duration_seconds gauge
-speedtest_scrape_duration_seconds 23.171728333
+# HELP speedtest_probe_duration_seconds Total time taken to complete the speedtest.
+# TYPE speedtest_probe_duration_seconds gauge
+speedtest_probe_duration_seconds{target="nearest"} 23.171728333
 
 # HELP speedtest_status Whether the speedtest was successful (-1 = partial success, 0 = failure, 1 = success).
 # TYPE speedtest_status gauge
-speedtest_status{distance="121.286353",server_country="Germany",server_id="17982",server_lat="51.9066",server_lon="12.5416",server_name="osts-01.wittenberg-net.de.prod.hosts.ooklaserver.net:8080",user_ip="[REDACTED]",user_isp="Vodafone Germany",user_lat="REDACTED",user_lon="REDACTED"} 1
+speedtest_status{distance="121.286353",server_country="Germany",server_id="17982",server_lat="51.9066",server_lon="12.5416",server_name="osts-01.wittenberg-net.de.prod.hosts.ooklaserver.net:8080",target="nearest",user_ip="[REDACTED]",user_isp="Vodafone Germany",user_lat="REDACTED",user_lon="REDACTED"} 1
 
 # HELP speedtest_upload_speed_bps Upload speed in bits per second.
 # TYPE speedtest_upload_speed_bps gauge
-speedtest_upload_speed_bps 5.175917158818312e+07
+speedtest_upload_speed_bps{target="nearest"} 5.175917158818312e+07
 ```
+
+`speedtest_status` is the one to alert on: `1` = all three tests passed, `-1` = partial, `0` = failed.
 
 ## Grafana Dashboard
 
 Pre-built Grafana dashboards are available for both VictoriaMetrics and Prometheus data sources:
 
-| Data Source Type | Dashboard JSON                                                                    |
-| ---------------- | --------------------------------------------------------------------------------- |
-| Prometheus       | [speedtest-exporter-prometheus.json](./assets/speedtest-exporter-prometheus.json) |
+| Data Source Type | Dashboard JSON                                                                                |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| Prometheus       | [speedtest-exporter-prometheus.json](./assets/speedtest-exporter-prometheus.json)             |
+| VictoriaMetrics  | [speedtest-exporter-victoriametrics.json](./assets/speedtest-exporter-victoriametrics.json)   |
+
+Both dashboards have a datasource picker at the top, so they work with any
+Grafana that has a Prometheus or VictoriaMetrics datasource. If a panel says
+"Datasource not found", pick your datasource from that dropdown.
 
 ![grafana-dashboard-screenshot.png](./assets/grafana-dashboard-screenshot.png)
 
@@ -107,28 +122,62 @@ Pre-built Grafana dashboards are available for both VictoriaMetrics and Promethe
 ```yaml
 scrape_configs:
   - job_name: "speedtest"
-    scrape_interval: 1h
-    scrape_timeout: 2m
-    static_configs:
-      - targets: ["speedtest_exporter:8080"]
-```
-
-### Using Query Parameters for Server Selection
-
-Override the server ID on a per-scrape basis by adding `params` to the scrape config:
-
-```yaml
-scrape_configs:
-  - job_name: "speedtest"
+    metrics_path: /probe
     scrape_interval: 1h
     scrape_timeout: 2m
     params:
-      server_id: ["1234"] # Override SERVER_ID env var for this job
+      target: ["nearest"] # becomes the target label
     static_configs:
       - targets: ["speedtest_exporter:8080"]
+    relabel_configs:
+      - source_labels: [__param_target]
+        target_label: instance
 ```
 
-**Note:** Query parameter `server_id` takes precedence over the `SERVER_ID` environment variable. If the specified server is unavailable, the exporter automatically selects the nearest server.
+`instance` is relabelled from `target` because every probe comes from the same
+exporter address; without it all targets share one `instance`.
+
+### Measuring several servers
+
+Add one scrape config per target, each with its own `job_name` and its own
+`server_id`:
+
+```yaml
+scrape_configs:
+  - job_name: "speedtest_nearest"
+    metrics_path: /probe
+    scrape_interval: 1h
+    scrape_timeout: 2m
+    params:
+      target: ["nearest"]
+    static_configs:
+      - targets: ["speedtest_exporter:8080"]
+    relabel_configs:
+      - source_labels: [__param_target]
+        target_label: instance
+
+  - job_name: "speedtest_berlin"
+    metrics_path: /probe
+    scrape_interval: 1h
+    scrape_timeout: 2m
+    params:
+      target: ["berlin"]
+      server_id: ["17982"]
+    static_configs:
+      - targets: ["speedtest_exporter:8080"]
+    relabel_configs:
+      - source_labels: [__param_target]
+        target_label: instance
+```
+
+**Notes:**
+
+- Server selection is per scrape, via `server_id` in the query string. There is
+  no global setting — that is what makes one exporter serve several servers. If
+  the requested server is unavailable, the nearest one is used instead.
+- Probes are serialised — one speedtest at a time, because two at once measure
+  each other. A probe that has to wait more than 2 minutes reports
+  `speedtest_status 0` rather than a wrong number.
 
 ## Resource Usage
 
@@ -152,6 +201,7 @@ task: Available tasks for this project:
 * build:                 Build the application binary for the current platform
 * build-docker:          Build Docker image
 * build-platforms:       Build the application binaries for multiple platforms and architectures
+* dev:                   Runs the development stack: exporter, VictoriaMetrics and Grafana
 * fmt:                   Formats all Go source files
 * install:               Install required tools and dependencies
 * lint:                  Run static analysis and code linting using golangci-lint
@@ -171,11 +221,16 @@ goreleaser release --snapshot --clean
 ...
 ```
 
-#### Dev Compose Stack
+#### Dev Stack
+
+Exporter, VictoriaMetrics, Prometheus and Grafana with both dashboards already
+provisioned:
 
 ```bash
-docker compose -f compose-dev.yml up --build --force-recreate -d
+task dev
 ```
+
+See [development/README.md](./development/README.md) for URLs and details.
 
 ---
 

@@ -1,0 +1,158 @@
+---
+name: speedtest_exporter_dev
+
+services:
+  speedtest_exporter:
+    build:
+      context: ..
+    container_name: speedtest_exporter
+    ports:
+      - "8080:8080"
+    networks:
+      - dev
+    restart: unless-stopped
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: speedtest_exporter_dev_victoriametrics
+    command:
+      - "-promscrape.config=/scrape.yml"
+      - "-retentionPeriod=30d"
+    volumes:
+      - victoriametrics_data:/victoria-metrics-data
+    configs:
+      - source: scrape.yml
+        target: /scrape.yml
+        mode: 444
+    ports:
+      - "8428:8428"
+    networks:
+      - dev
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: speedtest_exporter_dev_prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+    volumes:
+      - prometheus_data:/prometheus
+    configs:
+      # Same file VictoriaMetrics reads: this scrape config is valid for both.
+      - source: scrape.yml
+        target: /etc/prometheus/prometheus.yml
+        mode: 444
+    ports:
+      - "9090:9090"
+    networks:
+      - dev
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: speedtest_exporter_dev_grafana
+    depends_on:
+      - victoriametrics
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: changeme
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_AUTH_ANONYMOUS_ENABLED: true
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_INSTALL_PLUGINS: victoriametrics-metrics-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../assets/speedtest-exporter-victoriametrics.json:/var/lib/grafana/dashboards/speedtest-exporter-victoriametrics.json:ro
+      - ../assets/speedtest-exporter-prometheus.json:/var/lib/grafana/dashboards/speedtest-exporter-prometheus.json:ro
+    configs:
+      - source: datasources.yml
+        target: /etc/grafana/provisioning/datasources/datasources.yml
+        mode: 444
+      - source: dashboards.yml
+        target: /etc/grafana/provisioning/dashboards/dashboards.yml
+        mode: 444
+    ports:
+      - "3001:3000"   # 3000 is often taken (Obsidian uses it on macOS)
+    networks:
+      - dev
+    restart: unless-stopped
+
+networks:
+  dev:
+
+volumes:
+  victoriametrics_data:
+  prometheus_data:
+  grafana_data:
+
+configs:
+  scrape.yml:
+    name: speedtest_exporter_dev_scrape.yml
+    content: |
+      ---
+      # Every probe is a real speedtest: a few hundred MB of traffic each.
+      scrape_configs:
+        - job_name: speedtest_exporter
+          metrics_path: /probe
+          scrape_interval: 5m
+          scrape_timeout: 2m
+          params:
+            # A name for this measurement, not an address: it only becomes the
+            # target label. The server is chosen by server_id (or nearest).
+            target: ["nearest"]
+          static_configs:
+            - targets: ["speedtest_exporter:8080"]
+          relabel_configs:
+            - source_labels: [__param_target]
+              target_label: instance
+
+        # Second target, so the dashboard's target variable has something to pick.
+        - job_name: speedtest_berlin
+          metrics_path: /probe
+          scrape_interval: 5m
+          scrape_timeout: 2m
+          params:
+            target: ["berlin"]
+            server_id: ["17982"]
+          static_configs:
+            - targets: ["speedtest_exporter:8080"]
+          relabel_configs:
+            - source_labels: [__param_target]
+              target_label: instance
+
+  datasources.yml:
+    name: speedtest_exporter_dev_datasources.yml
+    content: |
+      ---
+      apiVersion: 1
+
+      datasources:
+        - name: VictoriaMetrics
+          type: victoriametrics-metrics-datasource
+          access: proxy
+          url: http://victoriametrics:8428
+          isDefault: true
+
+        - name: Prometheus
+          type: prometheus
+          access: proxy
+          url: http://prometheus:9090
+
+  dashboards.yml:
+    name: speedtest_exporter_dev_dashboards.yml
+    content: |
+      ---
+      apiVersion: 1
+
+      providers:
+        - name: speedtest_exporter
+          orgId: 1
+          folder: ''
+          type: file
+          disableDeletion: false
+          editable: true
+          allowUiUpdates: true
+          options:
+            path: /var/lib/grafana/dashboards

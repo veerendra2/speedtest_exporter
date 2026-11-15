@@ -14,12 +14,33 @@ import (
 )
 
 const (
-	namespace   = "speedtest"
-	testTimeout = 2 * time.Minute
+	namespace = "speedtest"
+
+	// ProbeTimeout bounds one probe: the user/server lookup plus the three tests.
+	ProbeTimeout = 2 * time.Minute
+
+	// defaultTarget is the target label used when the scrape sends none.
+	defaultTarget = "speedtest"
 )
 
+// probeSlot serialises probes. Two speedtests at once steal bandwidth from each
+// other and both report wrong speeds.
+var probeSlot = make(chan struct{}, 1)
+
+// withProbeSlot runs fn while holding the single probe slot, so only one
+// speedtest runs at a time. It reports false if ctx ended before the slot freed.
+func withProbeSlot(ctx context.Context, fn func()) bool {
+	select {
+	case probeSlot <- struct{}{}:
+		defer func() { <-probeSlot }()
+		fn()
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
 type Config struct {
-	ServerID       int `env:"SERVER_ID"       default:"0" help:"Speedtest.net server ID (0 = auto-select nearest server)"`
 	MaxConnections int `env:"MAX_CONNECTIONS" default:"4" help:"Number of parallel TCP streams for bandwidth test (1 = low data usage, 4–8 = accurate)"`
 }
 
@@ -28,6 +49,7 @@ var (
 		prometheus.BuildFQName(namespace, "", "status"),
 		"Whether the speedtest was successful (-1 = partial success, 0 = failure, 1 = success).",
 		[]string{
+			"target",
 			"user_lat",
 			"user_lon",
 			"user_ip",
@@ -40,38 +62,40 @@ var (
 			"distance",
 		}, nil,
 	)
-	scrapeDurationSeconds = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "scrape_duration_seconds"),
+	probeDurationSeconds = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "probe_duration_seconds"),
 		"Total time taken to complete the speedtest.",
-		[]string{}, nil,
+		[]string{"target"}, nil,
 	)
 	latency = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "latency_seconds"),
 		"Network latency to the speedtest server in seconds.",
-		[]string{}, nil,
+		[]string{"target"}, nil,
 	)
 	upload = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "upload_speed_bps"),
 		"Upload speed in bits per second.",
-		[]string{}, nil,
+		[]string{"target"}, nil,
 	)
 	download = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, "", "download_speed_bps"),
 		"Download speed in bits per second.",
-		[]string{}, nil,
+		[]string{"target"}, nil,
 	)
 )
 
-type Exporter struct {
-	serverID       int
-	client         *speedtest.Speedtest
-	metricsHandler http.Handler
+// probe is one Prometheus scrape: a single speedtest against one server,
+// collected into a registry that lives only for that request.
+type probe struct {
+	target   string
+	serverID int
+	client   *speedtest.Speedtest
 }
 
-// Describe describes all the metrics. It implements prometheus.Collector.
-func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
+// Describe implements prometheus.Collector.
+func (p *probe) Describe(ch chan<- *prometheus.Desc) {
 	ch <- status
-	ch <- scrapeDurationSeconds
+	ch <- probeDurationSeconds
 	ch <- latency
 	ch <- upload
 	ch <- download
@@ -90,20 +114,33 @@ func statusValue(successCount int) float64 {
 	}
 }
 
-func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
+// Collect implements prometheus.Collector.
+func (p *probe) Collect(ch chan<- prometheus.Metric) {
 	start := time.Now()
 
-	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), ProbeTimeout)
 	defer cancel()
 
-	successCount, user, server := e.runSpeedTest(ctx, ch)
+	successCount := 0
+	var user *speedtest.User
+	var server *speedtest.Server
+
+	ran := withProbeSlot(ctx, func() {
+		successCount, user, server = p.run(ctx, ch)
+	})
+	if !ran {
+		slog.Warn("Another speedtest is still running, reporting this probe as failed", "target", p.target)
+	}
+
 	statVal := statusValue(successCount)
 
 	labels := []string{
+		p.target,
 		"N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A", "N/A",
 	}
 	if statVal != 0.0 {
 		labels = []string{
+			p.target,
 			user.Lat, user.Lon, user.IP, user.Isp,
 			server.Lat, server.Lon, server.ID, server.Host, server.Country,
 			fmt.Sprintf("%f", server.Distance),
@@ -111,13 +148,13 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	ch <- prometheus.MustNewConstMetric(status, prometheus.GaugeValue, statVal, labels...)
-	ch <- prometheus.MustNewConstMetric(scrapeDurationSeconds, prometheus.GaugeValue, time.Since(start).Seconds())
+	ch <- prometheus.MustNewConstMetric(probeDurationSeconds, prometheus.GaugeValue, time.Since(start).Seconds(), p.target)
 }
 
-func (e *Exporter) runSpeedTest(ctx context.Context, ch chan<- prometheus.Metric) (int, *speedtest.User, *speedtest.Server) {
+func (p *probe) run(ctx context.Context, ch chan<- prometheus.Metric) (int, *speedtest.User, *speedtest.Server) {
 	successCount := 0
 
-	user, err := e.client.FetchUserInfo()
+	user, err := p.client.FetchUserInfoContext(ctx)
 	if err != nil {
 		slog.Error("Failed to fetch user info", "error", err)
 		return successCount, nil, nil
@@ -126,14 +163,14 @@ func (e *Exporter) runSpeedTest(ctx context.Context, ch chan<- prometheus.Metric
 	// When a specific server is configured, fetch it directly — avoids fetching and
 	// pinging the full server list. Falls back to nearest on error.
 	var server *speedtest.Server
-	if e.serverID != 0 {
-		server, err = e.client.FetchServerByID(fmt.Sprintf("%d", e.serverID))
+	if p.serverID != 0 {
+		server, err = p.client.FetchServerByIDContext(ctx, strconv.Itoa(p.serverID))
 		if err != nil {
-			slog.Warn("Requested server not found, falling back to nearest", "server_id", e.serverID, "error", err)
+			slog.Warn("Requested server not found, falling back to nearest", "server_id", p.serverID, "error", err)
 		}
 	}
 	if server == nil {
-		serverList, err := e.client.FetchServers()
+		serverList, err := p.client.FetchServerListContext(ctx)
 		if err != nil {
 			slog.Error("Failed to fetch servers", "error", err)
 			return successCount, nil, nil
@@ -147,10 +184,10 @@ func (e *Exporter) runSpeedTest(ctx context.Context, ch chan<- prometheus.Metric
 			return successCount, nil, nil
 		}
 		server = targets[0]
-		serverList = nil
 	}
 
 	slog.Debug("Starting speedtest...",
+		"target", p.target,
 		"server_id", server.ID,
 		"server", server.Host,
 		"server_distance", server.Distance,
@@ -159,13 +196,13 @@ func (e *Exporter) runSpeedTest(ctx context.Context, ch chan<- prometheus.Metric
 		"user_isp", user.Isp,
 	)
 
-	if pingTest(ctx, server, ch) {
+	if pingTest(ctx, server, p.target, ch) {
 		successCount++
 	}
-	if downloadTest(ctx, server, ch) {
+	if downloadTest(ctx, server, p.target, ch) {
 		successCount++
 	}
-	if uploadTest(ctx, server, ch) {
+	if uploadTest(ctx, server, p.target, ch) {
 		successCount++
 	}
 
@@ -178,7 +215,7 @@ func (e *Exporter) runSpeedTest(ctx context.Context, ch chan<- prometheus.Metric
 	return successCount, user, server
 }
 
-func pingTest(ctx context.Context, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
+func pingTest(ctx context.Context, server *speedtest.Server, target string, ch chan<- prometheus.Metric) bool {
 	err := server.PingTestContext(ctx, nil)
 	if err != nil {
 		slog.Error("Failed to run ping test", "error", err)
@@ -190,13 +227,13 @@ func pingTest(ctx context.Context, server *speedtest.Server, ch chan<- prometheu
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		latency, prometheus.GaugeValue, server.Latency.Seconds(),
+		latency, prometheus.GaugeValue, server.Latency.Seconds(), target,
 	)
 
 	return true
 }
 
-func downloadTest(ctx context.Context, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
+func downloadTest(ctx context.Context, server *speedtest.Server, target string, ch chan<- prometheus.Metric) bool {
 	err := server.DownloadTestContext(ctx)
 	if err != nil {
 		slog.Error("Failed to run download test", "error", err)
@@ -212,13 +249,13 @@ func downloadTest(ctx context.Context, server *speedtest.Server, ch chan<- prome
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		download, prometheus.GaugeValue, float64(server.DLSpeed)*8,
+		download, prometheus.GaugeValue, float64(server.DLSpeed)*8, target,
 	)
 
 	return true
 }
 
-func uploadTest(ctx context.Context, server *speedtest.Server, ch chan<- prometheus.Metric) bool {
+func uploadTest(ctx context.Context, server *speedtest.Server, target string, ch chan<- prometheus.Metric) bool {
 	err := server.UploadTestContext(ctx)
 	if err != nil {
 		slog.Error("Failed to run upload test", "error", err)
@@ -234,37 +271,52 @@ func uploadTest(ctx context.Context, server *speedtest.Server, ch chan<- prometh
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		upload, prometheus.GaugeValue, float64(server.ULSpeed)*8,
+		upload, prometheus.GaugeValue, float64(server.ULSpeed)*8, target,
 	)
 
 	return true
 }
 
-func NewMetricsHandler(exporter *Exporter) http.Handler {
-	prometheusHandler := promhttp.Handler()
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		serverIDParam := r.URL.Query().Get("server_id")
-		if serverIDParam != "" {
-			if id, err := strconv.Atoi(serverIDParam); err == nil {
-				originalServerID := exporter.serverID
-				exporter.serverID = id
-				defer func() { exporter.serverID = originalServerID }()
-			} else {
-				slog.Warn("Invalid server_id parameter", "value", serverIDParam, "error", err)
-			}
+// probeParams reads the per-scrape target name and server ID from the query
+// string. server_id 0 means the SDK picks the nearest server.
+func probeParams(r *http.Request) (string, int, error) {
+	query := r.URL.Query()
+
+	target := query.Get("target")
+	if target == "" {
+		target = defaultTarget
+	}
+
+	serverID := 0
+	if param := query.Get("server_id"); param != "" {
+		id, err := strconv.Atoi(param)
+		if err != nil {
+			return "", 0, fmt.Errorf("invalid server_id %q: must be a number", param)
 		}
-		prometheusHandler.ServeHTTP(w, r)
-	})
+		serverID = id
+	}
+
+	return target, serverID, nil
 }
 
-func New(cfg Config) *Exporter {
-	exporter := &Exporter{
-		serverID: cfg.ServerID,
-		client: speedtest.New(speedtest.WithUserConfig(&speedtest.UserConfig{
-			MaxConnections: cfg.MaxConnections,
-			PingMode:       speedtest.TCP,
-		})),
-	}
-	exporter.metricsHandler = NewMetricsHandler(exporter)
-	return exporter
+// Handler returns the multi-target /probe endpoint. Each request runs one
+// speedtest and serves the result from its own registry, so no probe can see
+// or change another's state.
+func Handler(cfg Config) http.Handler {
+	client := speedtest.New(speedtest.WithUserConfig(&speedtest.UserConfig{
+		MaxConnections: cfg.MaxConnections,
+		PingMode:       speedtest.TCP,
+	}))
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		target, serverID, err := probeParams(r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		registry := prometheus.NewRegistry()
+		registry.MustRegister(&probe{target: target, serverID: serverID, client: client})
+		promhttp.HandlerFor(registry, promhttp.HandlerOpts{}).ServeHTTP(w, r)
+	})
 }

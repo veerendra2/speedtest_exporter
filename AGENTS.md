@@ -6,7 +6,7 @@ Guidance for agentic coding agents operating in this repository.
 
 ## Project Overview
 
-A Prometheus exporter for internet speed monitoring using speedtest.net. Written in Go, it exposes metrics via an HTTP `/metrics` endpoint. The collector runs ping, download, and upload tests on each Prometheus scrape.
+A Prometheus exporter for internet speed monitoring using speedtest.net. Written in Go, it follows the [multi-target exporter pattern](https://prometheus.io/docs/guides/multi-target-exporter/): `/probe?target=<name>` runs ping, download, and upload tests and returns the metrics for that one probe; `/metrics` serves only the exporter's own Go/process metrics.
 
 ---
 
@@ -38,7 +38,7 @@ task run
 
 ### Running a Single Test
 
-No test files currently exist. When tests are added, run a single test with:
+Tests live next to the code in `internal/collector/collector_test.go`. Run a single test with:
 
 ```bash
 # Run one test function in a specific package
@@ -65,7 +65,7 @@ Test files must end in `_test.go` and live alongside the package they test (e.g.
 
 ### Language and Toolchain
 
-- **Go** — `go.mod` specifies `go 1.26.0`; Docker dev image uses `golang:1.26.0`.
+- **Go** — `go.mod` specifies `go 1.27.1`; Docker dev image uses `golang:1.27.3`.
 - `CGO_ENABLED=0` is set globally (static binaries only).
 - No linter config file exists; `golangci-lint` runs with its defaults.
 
@@ -154,7 +154,8 @@ if err != nil {
 ### speedtest-go SDK Usage Rules
 
 - Always create a `*speedtest.Speedtest` client via `speedtest.New(...)` with `MaxConnections` and `PingMode: speedtest.TCP`; store it in `Exporter`. Never call package-level functions (`speedtest.FetchServers`, `speedtest.FetchUserInfo`) as they share a global client.
-- When `SERVER_ID != 0`, use `client.FetchServerByID(id)` to avoid fetching and pinging the entire server list. Fall back to `client.FetchServers()` only when needed.
+- When the probe asks for a specific `server_id`, use `client.FetchServerByIDContext(ctx, id)` to avoid fetching and pinging the entire server list. Fall back to `client.FetchServerListContext(ctx)` only when needed.
+- Always use the `*Context` variants (`FetchUserInfoContext`, `FetchServerByIDContext`, `FetchServerListContext`). The non-context variants use `context.Background()` with `http.DefaultClient`, which has no timeout, so a stalled API hangs the probe forever.
 - After each test round, always call **both**:
   ```go
   server.Context.Reset()            // clears DataChunks + RateSequence
@@ -168,10 +169,12 @@ if err != nil {
 
 ### Core Components
 
-- **`main.go`** — HTTP server (`/metrics`), graceful shutdown (SIGINT/SIGTERM, 10 s timeout), Kong CLI parsing, slogger setup, version logging at startup.
+- **`main.go`** — HTTP server (`/probe`, `/metrics`), graceful shutdown (SIGINT/SIGTERM, `ProbeTimeout + 10 s` so an in-flight probe finishes), Kong CLI parsing, slogger setup, version logging at startup.
 - **`internal/collector/collector.go`** — Prometheus collector; runs ping → download → upload on each scrape; handles server selection with fallback to nearest server. Key invariants:
   - `Exporter` holds a dedicated `*speedtest.Speedtest` client (never use package-level `speedtest.Fetch*` functions).
-  - `server.Context.Reset()` followed by `server.Context.Snapshots().Clean()` **must** be called after every test run to prevent unbounded memory growth.
+  - `server.Context.Reset()` followed by `server.Context.Snapshots().Clean()` **must** be called after every test run to prevent unbounded memory growth. NOTE: `server.Context` is the shared `*speedtest.Speedtest` client, not per-server state — this is why only one probe may run at a time.
+  - Probes are serialised by `probeSlot` (a one-slot channel). Two speedtests at once steal bandwidth from each other and both report wrong speeds.
+  - Each request gets its own `prometheus.Registry` and its own `probe` value. Never put per-scrape state on a shared struct; that was a data race and a way to pin the wrong server ID permanently.
   - All three test helpers (`pingTest`, `downloadTest`, `uploadTest`) accept a `context.Context` and call the `*Context` SDK variants — never the plain `PingTest`/`DownloadTest`/`UploadTest`.
   - `testTimeout = 2 * time.Minute` is applied per `Collect()` call to bound scrape duration.
 
@@ -180,32 +183,40 @@ if err != nil {
 | Metric | Type | Description |
 |---|---|---|
 | `speedtest_status` | Gauge | Overall result with 10 metadata labels |
-| `speedtest_scrape_duration_seconds` | Gauge | Total test wall-clock duration |
+| `speedtest_probe_duration_seconds` | Gauge | Total probe wall-clock duration |
 | `speedtest_latency_seconds` | Gauge | Ping latency |
 | `speedtest_download_speed_bps` | Gauge | Download speed (bytes/s × 8) |
 | `speedtest_upload_speed_bps` | Gauge | Upload speed (bytes/s × 8) |
+
+Every metric above carries a `target` label. The status metric also carries the user/server metadata labels and its value encodes the result (`1` success, `-1` partial, `0` failure).
 
 ### Configuration (environment variables / flags)
 
 | Env Var | Default | Description |
 |---|---|---|
 | `ADDRESS` | `:8080` | HTTP listen address |
-| `SERVER_ID` | `0` | speedtest.net server ID (0 = auto-select nearest) |
 | `MAX_CONNECTIONS` | `4` | Parallel TCP streams for bandwidth test (1 = low data usage, 4–8 = accurate) |
 | `LOG_LEVEL` | `info` | Logging level |
-| `LOG_FORMAT` | `json` | Log format (`json` or `console`) |
+| `LOG_FORMAT` | `console` | Log format (`json` or `console`) |
 
 ### Query Parameters
 
-The `/metrics` endpoint accepts an optional `server_id` query parameter to override the configured `SERVER_ID` for a single scrape:
+`/probe` accepts two optional query parameters:
+
+| Parameter   | Default          | Meaning                                                    |
+| ----------- | ---------------- | ---------------------------------------------------------- |
+| `target`    | `speedtest`      | Becomes the `target` label on every metric of this probe.   |
+| `server_id` | `0` (nearest)    | speedtest.net server ID for this probe.                     |
 
 ```
-GET /metrics?server_id=1234
+GET /probe?target=berlin&server_id=1234
 ```
 
-**Precedence:** Query parameter `server_id` takes precedence over the `SERVER_ID` environment variable.
+**Fallback behavior:** If the requested server ID is not found, the exporter automatically selects the nearest server. There is no global `SERVER_ID` setting: server selection is per scrape, which is what lets one exporter measure several servers.
 
-**Fallback behavior:** If the specified server ID (from query param or env var) is not found, the exporter automatically selects the nearest server.
+**Invalid input:** A non-numeric `server_id` returns HTTP 400.
+
+All probe metrics carry the `target` label, so one exporter can serve several targets without their series colliding. Prometheus scrape configs should relabel `instance` from `__param_target`, since every probe comes from the same exporter address.
 
 ### Version Injection (ldflags)
 
@@ -216,5 +227,5 @@ Build-time version info is injected into `github.com/veerendra2/gopackages/versi
 
 - Production images use `gcr.io/distroless/static:nonroot`; published to `ghcr.io/veerendra2/speedtest_exporter`.
 - Dev image uses `alpine:3.23.3` (see `Dockerfile`).
-- Dev stack: `docker compose -f compose-dev.yml up` starts the exporter + VictoriaMetrics + Grafana.
-- Recommended Prometheus scrape config: `scrape_interval: 1h`, `scrape_timeout: 2m`.
+- Dev stack: `task dev` (or `docker compose -f development/compose.yml up --build -d`) starts the exporter + VictoriaMetrics + Grafana with the dashboard provisioned. See `development/README.md`.
+- Recommended Prometheus scrape config: `metrics_path: /probe`, `scrape_interval: 1h`, `scrape_timeout: 2m`, `params.target`, and `instance` relabelled from `__param_target`.
