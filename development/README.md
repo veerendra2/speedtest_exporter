@@ -20,9 +20,10 @@ Both dashboards are provisioned automatically: **Dashboards → Speedtest Export
 (VictoriaMetrics)** and **(Prometheus)**. They are the same dashboard against the
 two datasources; VictoriaMetrics is the default.
 
-The scrapers start immediately, but a probe takes 30–60 seconds and Prometheus
-spreads first scrapes over its interval, so the panels say "No data" for the
-first few minutes. The dashboards default to the last 24 hours and refresh every
+The scrapers start immediately, but a probe takes 30–60 seconds, Prometheus
+spreads first scrapes over its interval, and with a 24-hour range Grafana puts
+the last point up to a step (15 minutes) before now. Expect "No data" for the
+first 15–30 minutes. The dashboards default to the last 24 hours and refresh every
 5 minutes.
 
 A probe takes 30–60 seconds — it runs a real speedtest against speedtest.net,
