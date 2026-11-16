@@ -75,8 +75,8 @@ the results stay apart:
 ```
 
 Probes are serialised: a second probe that arrives while one is running waits,
-and if it waits past the 2-minute probe timeout it reports `speedtest_status 0`
-instead of measuring. Stagger the intervals if you add several targets.
+and if it waits more than 30 seconds it reports `speedtest_status 0` instead of
+measuring. Stagger the intervals if you add several targets.
 
 ## Editing the dashboard
 

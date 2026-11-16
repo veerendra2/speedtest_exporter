@@ -173,7 +173,8 @@ if err != nil {
 - **`internal/collector/collector.go`** — Prometheus collector; runs ping → download → upload on each scrape; handles server selection with fallback to nearest server. Key invariants:
   - `Exporter` holds a dedicated `*speedtest.Speedtest` client (never use package-level `speedtest.Fetch*` functions).
   - `server.Context.Reset()` followed by `server.Context.Snapshots().Clean()` **must** be called after every test run to prevent unbounded memory growth. NOTE: `server.Context` is the shared `*speedtest.Speedtest` client, not per-server state — this is why only one probe may run at a time.
-  - Probes are serialised by `probeSlot` (a one-slot channel). Two speedtests at once steal bandwidth from each other and both report wrong speeds.
+  - Probes are serialised by `probeSlot` (a one-slot channel). Two speedtests at once steal bandwidth from each other and both report wrong speeds. `withProbeSlot` gives up after `probeSlotWait` (30 s), well inside `ProbeTimeout`, so the `speedtest_status 0` failure reaches the scraper before it times out.
+  - `probe.ctx` is the HTTP request context, so a caller that disconnects stops the running speedtest. `target` must be valid UTF-8 — checked in `probeParams`, because an invalid label value panics `MustNewConstMetric`.
   - Each request gets its own `prometheus.Registry` and its own `probe` value. Never put per-scrape state on a shared struct; that was a data race and a way to pin the wrong server ID permanently.
   - All three test helpers (`pingTest`, `downloadTest`, `uploadTest`) accept a `context.Context` and call the `*Context` SDK variants — never the plain `PingTest`/`DownloadTest`/`UploadTest`.
   - `testTimeout = 2 * time.Minute` is applied per `Collect()` call to bound scrape duration.

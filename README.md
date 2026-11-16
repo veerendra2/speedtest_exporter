@@ -176,7 +176,7 @@ scrape_configs:
   no global setting — that is what makes one exporter serve several servers. If
   the requested server is unavailable, the nearest one is used instead.
 - Probes are serialised — one speedtest at a time, because two at once measure
-  each other. A probe that has to wait more than 2 minutes reports
+  each other. A probe that has to wait more than 30 seconds reports
   `speedtest_status 0` rather than a wrong number.
 
 ## Resource Usage

@@ -79,6 +79,7 @@ func TestProbeParams(t *testing.T) {
 		{"server only", "/probe?server_id=1234", "speedtest", 1234, false},
 		{"target and server", "/probe?target=berlin&server_id=1234", "berlin", 1234, false},
 		{"invalid server id", "/probe?server_id=abc", "", 0, true},
+		{"invalid utf-8 target", "/probe?target=%FF", "", 0, true},
 	}
 
 	for _, tt := range tests {

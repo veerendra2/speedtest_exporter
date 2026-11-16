@@ -60,7 +60,8 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: changeme
       GF_USERS_ALLOW_SIGN_UP: false
       GF_AUTH_ANONYMOUS_ENABLED: true
-      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      # Viewers can look, not manage datasources: anonymous users reach this.
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
       GF_INSTALL_PLUGINS: victoriametrics-metrics-datasource
     volumes:
       - grafana_data:/var/lib/grafana
@@ -74,7 +75,9 @@ services:
         target: /etc/grafana/provisioning/dashboards/dashboards.yml
         mode: 444
     ports:
-      - "3001:3000"   # 3000 is often taken (Obsidian uses it on macOS)
+      # Loopback only: 3000 is often taken (Obsidian), and an anonymous
+      # Grafana on the LAN is an SSRF primitive.
+      - "127.0.0.1:3001:3000"
     networks:
       - dev
     restart: unless-stopped

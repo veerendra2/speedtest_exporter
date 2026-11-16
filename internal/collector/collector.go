@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"unicode/utf8"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -21,6 +22,10 @@ const (
 
 	// defaultTarget is the target label used when the scrape sends none.
 	defaultTarget = "speedtest"
+
+	// probeSlotWait bounds the wait for a free slot. It has to end well inside
+	// ProbeTimeout, or the failure lands after the scraper has already given up.
+	probeSlotWait = 30 * time.Second
 )
 
 // probeSlot serialises probes. Two speedtests at once steal bandwidth from each
@@ -28,14 +33,18 @@ const (
 var probeSlot = make(chan struct{}, 1)
 
 // withProbeSlot runs fn while holding the single probe slot, so only one
-// speedtest runs at a time. It reports false if ctx ended before the slot freed.
+// speedtest runs at a time. It reports false if the slot did not free up within
+// probeSlotWait, or if ctx ended first.
 func withProbeSlot(ctx context.Context, fn func()) bool {
+	wait, cancel := context.WithTimeout(ctx, probeSlotWait)
+	defer cancel()
+
 	select {
 	case probeSlot <- struct{}{}:
 		defer func() { <-probeSlot }()
 		fn()
 		return true
-	case <-ctx.Done():
+	case <-wait.Done():
 		return false
 	}
 }
@@ -87,6 +96,8 @@ var (
 // probe is one Prometheus scrape: a single speedtest against one server,
 // collected into a registry that lives only for that request.
 type probe struct {
+	// ctx is the request context, so a caller that goes away stops the test.
+	ctx      context.Context
 	target   string
 	serverID int
 	client   *speedtest.Speedtest
@@ -118,7 +129,7 @@ func statusValue(successCount int) float64 {
 func (p *probe) Collect(ch chan<- prometheus.Metric) {
 	start := time.Now()
 
-	ctx, cancel := context.WithTimeout(context.Background(), ProbeTimeout)
+	ctx, cancel := context.WithTimeout(p.ctx, ProbeTimeout)
 	defer cancel()
 
 	successCount := 0
@@ -286,6 +297,11 @@ func probeParams(r *http.Request) (string, int, error) {
 	if target == "" {
 		target = defaultTarget
 	}
+	// A label value that is not valid UTF-8 panics the metric constructor, and
+	// only after a full speedtest has run.
+	if !utf8.ValidString(target) {
+		return "", 0, fmt.Errorf("invalid target %q: must be valid UTF-8", target)
+	}
 
 	serverID := 0
 	if param := query.Get("server_id"); param != "" {
@@ -316,7 +332,7 @@ func Handler(cfg Config) http.Handler {
 		}
 
 		registry := prometheus.NewRegistry()
-		registry.MustRegister(&probe{target: target, serverID: serverID, client: client})
+		registry.MustRegister(&probe{ctx: r.Context(), target: target, serverID: serverID, client: client})
 		promhttp.HandlerFor(registry, promhttp.HandlerOpts{}).ServeHTTP(w, r)
 	})
 }
