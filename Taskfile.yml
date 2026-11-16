@@ -112,6 +112,11 @@ tasks:
       - test -f {{.GOPATH_BIN}}/govulncheck
       - test -f {{.GOPATH_BIN}}/golangci-lint
 
+  dev:
+    desc: "Runs the development stack: exporter, VictoriaMetrics and Grafana"
+    cmds:
+      - docker compose -f development/compose.yml up --build -d
+
   all:
     desc: "Run comprehensive checks: format, lint, security and test"
     cmds:

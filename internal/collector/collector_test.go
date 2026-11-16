@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -11,27 +13,28 @@ import (
 	"github.com/showwin/speedtest-go/speedtest"
 )
 
-func TestSpeedTestsNegativeValues(t *testing.T) {
+// TestSpeedTestsEmitNoMetricOnFailure points the SDK at a dead address, so the
+// tests fail before any speed is measured. NOTE: the DLSpeed/ULSpeed < 0 guard
+// (the SDK's "N/A" value) is not covered here — it needs a server that accepts
+// connections and then fails every transfer.
+func TestSpeedTestsEmitNoMetricOnFailure(t *testing.T) {
 	client := speedtest.New()
 	server, err := client.CustomServer("http://127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("failed to create custom server: %v", err)
 	}
 
-	server.DLSpeed = -1
-	server.ULSpeed = -1
-
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
 	ch := make(chan prometheus.Metric, 10)
 
-	if downloadTest(ctx, server, ch) {
-		t.Errorf("downloadTest() returned true for negative DLSpeed/failure, expected false")
+	if downloadTest(ctx, server, "test", ch) {
+		t.Errorf("downloadTest() returned true for a failing server, expected false")
 	}
 
-	if uploadTest(ctx, server, ch) {
-		t.Errorf("uploadTest() returned true for negative ULSpeed/failure, expected false")
+	if uploadTest(ctx, server, "test", ch) {
+		t.Errorf("uploadTest() returned true for a failing server, expected false")
 	}
 
 	close(ch)
@@ -63,19 +66,76 @@ func TestStatusComputation(t *testing.T) {
 	}
 }
 
-func TestMetricsHandler(t *testing.T) {
-	exp := New(Config{ServerID: 0, MaxConnections: 4})
-	handler := NewMetricsHandler(exp)
-
-	req := httptest.NewRequest(http.MethodGet, "/metrics?server_id=1234", nil)
-	rec := httptest.NewRecorder()
-
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", rec.Code)
+func TestProbeParams(t *testing.T) {
+	tests := []struct {
+		name         string
+		url          string
+		wantTarget   string
+		wantServerID int
+		wantErr      bool
+	}{
+		{"defaults", "/probe", "speedtest", 0, false},
+		{"target only", "/probe?target=berlin", "berlin", 0, false},
+		{"server only", "/probe?server_id=1234", "speedtest", 1234, false},
+		{"target and server", "/probe?target=berlin&server_id=1234", "berlin", 1234, false},
+		{"invalid server id", "/probe?server_id=abc", "", 0, true},
+		{"invalid utf-8 target", "/probe?target=%FF", "", 0, true},
 	}
-	if exp.serverID != 0 {
-		t.Errorf("expected serverID to be reset to 0, got %d", exp.serverID)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
+
+			target, serverID, err := probeParams(req)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("probeParams() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if target != tt.wantTarget {
+				t.Errorf("target = %q, want %q", target, tt.wantTarget)
+			}
+			if serverID != tt.wantServerID {
+				t.Errorf("serverID = %d, want %d", serverID, tt.wantServerID)
+			}
+		})
+	}
+}
+
+func TestWithProbeSlotSerialises(t *testing.T) {
+	var inFlight, peak atomic.Int32
+	var wg sync.WaitGroup
+
+	for range 4 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			withProbeSlot(context.Background(), func() {
+				now := inFlight.Add(1)
+				if now > peak.Load() {
+					peak.Store(now)
+				}
+				time.Sleep(10 * time.Millisecond)
+				inFlight.Add(-1)
+			})
+		}()
+	}
+	wg.Wait()
+
+	if got := peak.Load(); got != 1 {
+		t.Errorf("peak concurrent probes = %d, want 1", got)
+	}
+}
+
+func TestWithProbeSlotGivesUpOnTimeout(t *testing.T) {
+	probeSlot <- struct{}{}
+	defer func() { <-probeSlot }()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+
+	if withProbeSlot(ctx, func() { t.Error("fn ran while the slot was taken") }) {
+		t.Error("withProbeSlot() = true, want false when the slot stays busy")
 	}
 }

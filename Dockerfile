@@ -4,11 +4,11 @@
 #
 FROM golang:1.27.3 AS build
 WORKDIR /app
-RUN curl -sL https://taskfile.dev/install.sh | sh
+RUN go install github.com/go-task/task/v3/cmd/task@v3.54.0
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN /app/bin/task build
+RUN $(go env GOPATH)/bin/task build
 
 FROM alpine:3.24.3
 RUN apk update && apk add --no-cache ca-certificates
